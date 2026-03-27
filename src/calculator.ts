@@ -292,15 +292,35 @@ export class SMACalculator {
     }
   }
 
-  private drawStrokeInternal(points: {x: number, y: number}[], size: number, active: boolean) {
-    for (const p of points) {
-      const startX = Math.floor(p.x - (size - 1) / 2);
-      const startY = Math.floor(p.y - (size - 1) / 2);
+  public drawStrokeSegment(x1: number, y1: number, x2: number, y2: number, size: number, active: boolean) {
+    const dx = Math.abs(x2 - x1);
+    const dy = Math.abs(y2 - y1);
+    const steps = Math.max(dx, dy, 1);
+    
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const px = Math.round(x1 + (x2 - x1) * t);
+      const py = Math.round(y1 + (y2 - y1) * t);
+      
+      const startX = Math.floor(px - (size - 1) / 2);
+      const startY = Math.floor(py - (size - 1) / 2);
+      
       for (let y = startY; y < startY + size; y++) {
         for (let x = startX; x < startX + size; x++) {
           this.setPixel(x, y, active);
         }
       }
+    }
+  }
+
+  private drawStrokeInternal(points: {x: number, y: number}[], size: number, active: boolean) {
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      this.drawStrokeSegment(points[0].x, points[0].y, points[0].x, points[0].y, size, active);
+      return;
+    }
+    for (let i = 0; i < points.length - 1; i++) {
+        this.drawStrokeSegment(points[i].x, points[i].y, points[i+1].x, points[i+1].y, size, active);
     }
   }
 }

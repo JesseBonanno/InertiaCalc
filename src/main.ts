@@ -200,23 +200,19 @@ function drawAt(worldX: number, worldY: number) {
       };
     }
 
-    // Only add if point is different from last
     const lastPoint = currentStroke.points[currentStroke.points.length - 1];
     if (!lastPoint || lastPoint.x !== snapPos.x || lastPoint.y !== snapPos.y) {
-      currentStroke.points.push({ x: snapPos.x, y: snapPos.y });
-    }
+      const p1 = lastPoint || { x: snapPos.x, y: snapPos.y };
+      const p2 = { x: snapPos.x, y: snapPos.y };
 
-    // Still execute immediately for real-time feedback
-    const startX = Math.floor(snapPos.x - (thickness - 1) / 2);
-    const startY = Math.floor(snapPos.y - (thickness - 1) / 2);
-
-    for (let y = startY; y < startY + thickness; y++) {
-      for (let x = startX; x < startX + thickness; x++) {
-        if (calculator.setPixel(x, y, active)) {
-          renderer.updatePixel(x, y, active);
-          changed = true;
-        }
-      }
+      // Update Calculator (Pixel Grid)
+      calculator.drawStrokeSegment(p1.x, p1.y, p2.x, p2.y, thickness, active);
+      
+      // Update Renderer (Visual)
+      renderer.drawLine(p1.x, p1.y, p2.x, p2.y, thickness, active);
+      
+      currentStroke.points.push(p2);
+      changed = true;
     }
   }
 
@@ -230,6 +226,8 @@ window.addEventListener('resize', () => {
 
 canvas.addEventListener('mousedown', (e) => {
   if (e.button === 0) { // Left click
+    // Always start a fresh stroke state
+    currentStroke = null;
     isDrawing = true;
     const world = renderer.screenToWorld(e.clientX, e.clientY);
     drawAt(world.x, world.y);
@@ -263,7 +261,6 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', async () => {
   if (isDrawing && currentStroke) {
     calculator.addAction(currentStroke);
-    currentStroke = null;
     
     // Auto-save history to IndexedDB
     try {
@@ -273,6 +270,9 @@ window.addEventListener('mouseup', async () => {
       console.warn('Failed to auto-save:', err);
     }
   }
+  
+  // ALWAYS reset these, regardless of currentTool or isDrawing
+  currentStroke = null;
   isDrawing = false;
   isPanning = false;
 });

@@ -117,6 +117,28 @@ export class CanvasRenderer {
     }
   }
 
+  public drawLine(x1: number, y1: number, x2: number, y2: number, size: number, active: boolean) {
+    this.offCtx.beginPath();
+    this.offCtx.lineWidth = size;
+    this.offCtx.lineCap = 'square';
+    this.offCtx.lineJoin = 'round';
+    
+    if (active) {
+      this.offCtx.strokeStyle = "#38bdf8";
+      this.offCtx.globalCompositeOperation = 'source-over';
+    } else {
+      this.offCtx.strokeStyle = "black"; // Not used but for reference
+      this.offCtx.globalCompositeOperation = 'destination-out';
+    }
+    
+    this.offCtx.moveTo(x1, y1);
+    this.offCtx.lineTo(x2, y2);
+    this.offCtx.stroke();
+    
+    // Reset composite operation
+    this.offCtx.globalCompositeOperation = 'source-over';
+  }
+
   public drawISection(x: number, y: number, w: number, h: number, tf: number, tw: number, active: boolean) {
     const startX = Math.floor(x - w / 2);
     const startY = Math.floor(y - h / 2);
