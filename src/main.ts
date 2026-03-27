@@ -114,6 +114,14 @@ function updateUI() {
   });
 }
 
+let uiUpdateTimeout: number | undefined;
+function requestUIUpdate() {
+  if (uiUpdateTimeout) clearTimeout(uiUpdateTimeout);
+  uiUpdateTimeout = setTimeout(() => {
+    updateUI();
+  }, 100) as unknown as number; // Debounce by 100ms
+}
+
 function getSnapPos(worldX: number, worldY: number) {
   const snap = parseInt(snapSizeSlider.value, 10);
   if (snap === 0) return { x: Math.floor(worldX), y: Math.floor(worldY) };
@@ -142,7 +150,7 @@ function drawAt(worldX: number, worldY: number) {
       active
     });
     calculator.executeAction(calculator.history[calculator.history.length - 1]);
-    renderer.syncFromData(calculator.getGrid());
+    renderer.drawRect(snapPos.x, snapPos.y, w, h, active);
     changed = true;
     isDrawing = false; // Discrete action
   } else if (currentShape === 'circle') {
@@ -156,7 +164,7 @@ function drawAt(worldX: number, worldY: number) {
       active
     });
     calculator.executeAction(calculator.history[calculator.history.length - 1]);
-    renderer.syncFromData(calculator.getGrid());
+    renderer.drawCircle(snapPos.x, snapPos.y, r, active);
     changed = true;
     isDrawing = false; // Discrete action
   } else if (currentShape === 'isection') {
@@ -176,7 +184,7 @@ function drawAt(worldX: number, worldY: number) {
       active
     });
     calculator.executeAction(calculator.history[calculator.history.length - 1]);
-    renderer.syncFromData(calculator.getGrid());
+    renderer.drawISection(snapPos.x, snapPos.y, W, H, tf, tw, active);
     changed = true;
     isDrawing = false; // Discrete action
   } else {
@@ -212,7 +220,7 @@ function drawAt(worldX: number, worldY: number) {
     }
   }
 
-  if (changed) updateUI();
+  if (changed) requestUIUpdate();
 }
 
 // Event Listeners
@@ -260,6 +268,7 @@ window.addEventListener('mouseup', async () => {
     // Auto-save history to IndexedDB
     try {
       await storage.save('last-session-history', calculator.history);
+      updateUI(); // Final update after stroke
     } catch (err) {
       console.warn('Failed to auto-save:', err);
     }
@@ -347,7 +356,6 @@ snapSizeSlider.addEventListener('input', () => {
 });
 
 btnClear.addEventListener('click', () => {
-  calculator.addAction({ type: 'clear' });
   calculator.executeAction({ type: 'clear' });
   renderer.clear();
   updateUI();
@@ -536,18 +544,18 @@ btnExportPng.addEventListener('click', () => {
 });
 
 btnUndo.addEventListener('click', () => {
-  if (calculator.undo()) {
-    renderer.syncFromData(calculator.getGrid());
-    updateUI();
-  }
-});
+    if (calculator.undo()) {
+      renderer.syncFromData(calculator.getGrid());
+      updateUI();
+    }
+  });
 
-btnRedo.addEventListener('click', () => {
-  if (calculator.redo()) {
-    renderer.syncFromData(calculator.getGrid());
-    updateUI();
-  }
-});
+  btnRedo.addEventListener('click', () => {
+    if (calculator.redo()) {
+      renderer.syncFromData(calculator.getGrid());
+      updateUI();
+    }
+  });
 
 // Shortcuts
 window.addEventListener('keydown', (e) => {

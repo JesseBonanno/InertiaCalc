@@ -16,7 +16,6 @@ export interface SMAResults {
   ky: number;
   Zx: number; // Elastic Section Modulus
   Zy: number;
-  perimeter: number;
   xMin: number;
   xMax: number;
   yMin: number;
@@ -129,7 +128,7 @@ export class SMACalculator {
       return { 
         count: 0, area: 0, width: 0, height: 0, centroidX: 0, centroidY: 0, 
         Ix: 0, Iy: 0, Ixy: 0, J: 0, Imax: 0, Imin: 0, theta: 0, 
-        kx: 0, ky: 0, Zx: 0, Zy: 0, perimeter: 0,
+        kx: 0, ky: 0, Zx: 0, Zy: 0,
         xMin: 0, xMax: 0, yMin: 0, yMax: 0
       };
     }
@@ -160,19 +159,7 @@ export class SMACalculator {
     const Zx = yMaxDist > 0 ? Ix / yMaxDist : 0;
     const Zy = xMaxDist > 0 ? Iy / xMaxDist : 0;
 
-    // Perimeter calculation (Edge counting)
-    let p = 0;
-    for (let i = 0; i < this.grid.length; i++) {
-      if (this.grid[i] === 1) {
-        const x = i % this.width;
-        const y = Math.floor(i / this.width);
-        // Neighbors (Top, Bottom, Left, Right)
-        if (y === 0 || this.grid[i - this.width] === 0) p++;
-        if (y === this.height - 1 || this.grid[i + this.width] === 0) p++;
-        if (x === 0 || this.grid[i - 1] === 0) p++;
-        if (x === this.width - 1 || this.grid[i + 1] === 0) p++;
-      }
-    }
+
 
     return {
       count: this.n,
@@ -192,7 +179,6 @@ export class SMACalculator {
       ky,
       Zx,
       Zy,
-      perimeter: p,
       xMin: this.xMin,
       xMax: this.xMax,
       yMin: this.yMin,

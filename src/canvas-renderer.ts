@@ -90,6 +90,50 @@ export class CanvasRenderer {
     }
   }
 
+  public drawRect(x: number, y: number, w: number, h: number, active: boolean) {
+    const startX = Math.floor(x - w / 2);
+    const startY = Math.floor(y - h / 2);
+    if (active) {
+      this.offCtx.fillStyle = "#38bdf8";
+      this.offCtx.fillRect(startX, startY, w, h);
+    } else {
+      this.offCtx.clearRect(startX, startY, w, h);
+    }
+  }
+
+  public drawCircle(cx: number, cy: number, r: number, active: boolean) {
+    if (active) {
+      this.offCtx.fillStyle = "#38bdf8";
+      this.offCtx.beginPath();
+      this.offCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      this.offCtx.fill();
+    } else {
+      this.offCtx.save();
+      this.offCtx.globalCompositeOperation = 'destination-out';
+      this.offCtx.beginPath();
+      this.offCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      this.offCtx.fill();
+      this.offCtx.restore();
+    }
+  }
+
+  public drawISection(x: number, y: number, w: number, h: number, tf: number, tw: number, active: boolean) {
+    const startX = Math.floor(x - w / 2);
+    const startY = Math.floor(y - h / 2);
+    const webX = Math.floor(x - tw / 2);
+
+    if (active) {
+      this.offCtx.fillStyle = "#38bdf8";
+      this.offCtx.fillRect(startX, startY, w, tf); // Top
+      this.offCtx.fillRect(startX, Math.floor(y + h / 2 - tf), w, tf); // Bottom
+      this.offCtx.fillRect(webX, startY, tw, h); // Web
+    } else {
+      this.offCtx.clearRect(startX, startY, w, tf);
+      this.offCtx.clearRect(startX, Math.floor(y + h / 2 - tf), w, tf);
+      this.offCtx.clearRect(webX, startY, tw, h);
+    }
+  }
+
   public syncFromData(data: Uint8Array) {
     this.offCtx.clearRect(0, 0, this.width, this.height);
     this.offCtx.fillStyle = "#38bdf8";
