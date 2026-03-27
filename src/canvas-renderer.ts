@@ -101,42 +101,51 @@ export class CanvasRenderer {
     }
   }
 
-  public drawCircle(cx: number, cy: number, r: number, active: boolean) {
-    if (active) {
-      this.offCtx.fillStyle = "#38bdf8";
-      this.offCtx.beginPath();
-      this.offCtx.arc(cx, cy, r, 0, Math.PI * 2);
-      this.offCtx.fill();
-    } else {
-      this.offCtx.save();
-      this.offCtx.globalCompositeOperation = 'destination-out';
-      this.offCtx.beginPath();
-      this.offCtx.arc(cx, cy, r, 0, Math.PI * 2);
-      this.offCtx.fill();
-      this.offCtx.restore();
+  public drawLine(x1: number, y1: number, x2: number, y2: number, size: number, active: boolean) {
+    const dx = Math.abs(x2 - x1);
+    const dy = Math.abs(y2 - y1);
+    const steps = Math.max(dx, dy, 1);
+    
+    if (active) this.offCtx.fillStyle = "#38bdf8";
+
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const px = Math.round(x1 + (x2 - x1) * t);
+        const py = Math.round(y1 + (y2 - y1) * t);
+        
+        const startX = Math.floor(px - (size - 1) / 2);
+        const startY = Math.floor(py - (size - 1) / 2);
+        
+        if (active) {
+            this.offCtx.fillRect(startX, startY, size, size);
+        } else {
+            this.offCtx.clearRect(startX, startY, size, size);
+        }
     }
   }
 
-  public drawLine(x1: number, y1: number, x2: number, y2: number, size: number, active: boolean) {
-    this.offCtx.beginPath();
-    this.offCtx.lineWidth = size;
-    this.offCtx.lineCap = 'square';
-    this.offCtx.lineJoin = 'round';
-    
-    if (active) {
-      this.offCtx.strokeStyle = "#38bdf8";
-      this.offCtx.globalCompositeOperation = 'source-over';
-    } else {
-      this.offCtx.strokeStyle = "black"; // Not used but for reference
-      this.offCtx.globalCompositeOperation = 'destination-out';
+  public drawCircle(xPos: number, yPos: number, r: number, active: boolean) {
+    const r2 = r * r;
+    const startX = Math.floor(xPos - r);
+    const endX = Math.ceil(xPos + r);
+    const startY = Math.floor(yPos - r);
+    const endY = Math.ceil(yPos + r);
+
+    if (active) this.offCtx.fillStyle = "#38bdf8";
+
+    for (let y = startY; y < endY; y++) {
+      for (let x = startX; x < endX; x++) {
+        const dx = x - xPos + 0.5;
+        const dy = y - yPos + 0.5;
+        if (dx*dx + dy*dy <= r2) {
+            if (active) {
+                this.offCtx.fillRect(x, y, 1, 1);
+            } else {
+                this.offCtx.clearRect(x, y, 1, 1);
+            }
+        }
+      }
     }
-    
-    this.offCtx.moveTo(x1, y1);
-    this.offCtx.lineTo(x2, y2);
-    this.offCtx.stroke();
-    
-    // Reset composite operation
-    this.offCtx.globalCompositeOperation = 'source-over';
   }
 
   public drawISection(x: number, y: number, w: number, h: number, tf: number, tw: number, active: boolean) {

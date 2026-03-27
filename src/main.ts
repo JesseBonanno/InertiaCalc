@@ -355,10 +355,18 @@ snapSizeSlider.addEventListener('input', () => {
   snapSizeValue.textContent = val === 0 ? '0' : val.toString();
 });
 
-btnClear.addEventListener('click', () => {
+btnClear.addEventListener('click', async () => {
+  calculator.addAction({ type: 'clear' });
   calculator.executeAction({ type: 'clear' });
   renderer.clear();
   updateUI();
+  
+  // Auto-save history to IndexedDB
+  try {
+    await storage.save('last-session-history', calculator.history);
+  } catch (err) {
+    console.warn('Failed to auto-save:', err);
+  }
 });
 
 btnReset.addEventListener('click', () => {
