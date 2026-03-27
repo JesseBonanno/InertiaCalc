@@ -42,6 +42,7 @@ const snapSizeSlider = document.getElementById('snap-size-slider') as HTMLInputE
 const snapSizeValue = document.getElementById('snap-size-value') as HTMLSpanElement;
 const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
 const btnReset = document.getElementById('btn-reset-view') as HTMLButtonElement;
+const btnExportPng = document.getElementById('btn-export-png') as HTMLButtonElement;
 const btnUndo = document.getElementById('btn-undo') as HTMLButtonElement;
 const btnRedo = document.getElementById('btn-redo') as HTMLButtonElement;
 const coordDisplay = document.getElementById('coordinate-display') as HTMLDivElement;
@@ -376,6 +377,202 @@ btnClear.addEventListener('click', () => {
 
 btnReset.addEventListener('click', () => {
   renderer.centerView();
+});
+
+btnExportPng.addEventListener('click', () => {
+  const results = calculator.getResults();
+  if (results.count === 0) {
+    alert("No shape to export.");
+    return;
+  }
+
+  const canvasWidth = 1600;
+  const canvasHeight = 1200;
+  
+  const expCanvas = document.createElement('canvas');
+  expCanvas.width = canvasWidth;
+  expCanvas.height = canvasHeight;
+  const ctx = expCanvas.getContext('2d')!;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  const leftWidth = 1000;
+  const padding = 60;
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 44px sans-serif";
+  ctx.fillText("InertiaCalc Output Report", padding, padding + 40);
+
+  const xMin = results.xMin;
+  const xMax = results.xMax;
+  const yMin = results.yMin;
+  const yMax = results.yMax;
+  const w = results.width;
+  const h = results.height;
+  
+  const availableW = leftWidth - 2 * padding;
+  const availableH = canvasHeight - 200;
+  const scale = Math.min(availableW / w, availableH / h) * 0.9;
+
+  const grid = calculator.getGrid();
+  
+  const startX = padding + (availableW - w * scale) / 2;
+  const startY = 160 + (availableH - h * scale) / 2;
+
+  ctx.fillStyle = "#0f172a";
+  
+  // Use a fast path: if scale is >= 1, draw individual rects. 
+  // If scale < 1, drawn rects might alias badly with fillRect, but this simple method usually suffices.
+  // For safety, ceil the scale to prevent gaps if scale is > 1.
+  const drawScale = Math.max(scale, 1.0); 
+
+  for (let y = yMin; y <= yMax; y++) {
+    for (let x = xMin; x <= xMax; x++) {
+      const idx = y * GRID_SIZE + x;
+      if (grid[idx] === 1) {
+        // Draw slightly overlapping rects to prevent sub-pixel seams
+        ctx.fillRect(Math.floor(startX + (x - xMin) * scale), Math.floor(startY + (y - yMin) * scale), Math.ceil(drawScale), Math.ceil(drawScale));
+      }
+    }
+  }
+
+  const cxRaw = results.centroidX;
+  const cyRaw = results.centroidY;
+  const cxDraw = startX + (cxRaw - 0.5 - xMin) * scale;
+  const cyDraw = startY + (cyRaw - 0.5 - yMin) * scale;
+  
+  ctx.strokeStyle = "#e11d48";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cxDraw - 40, cyDraw); ctx.lineTo(cxDraw + 40, cyDraw);
+  ctx.moveTo(cxDraw, cyDraw - 40); ctx.lineTo(cxDraw, cyDraw + 40);
+  ctx.stroke();
+
+  // Draw Bounding Box Annotations (b and d)
+  ctx.strokeStyle = "#475569"; // slate-600
+  ctx.fillStyle = "#475569";
+  ctx.lineWidth = 1.5;
+  ctx.font = "italic 20px sans-serif";
+
+  // Width (b) annotation - Bottom
+  const bY = startY + (h * scale) + 25;
+  ctx.beginPath();
+  ctx.moveTo(startX, bY);
+  ctx.lineTo(startX + w * scale, bY);
+  ctx.moveTo(startX, bY - 8); ctx.lineTo(startX, bY + 8);
+  ctx.moveTo(startX + w * scale, bY - 8); ctx.lineTo(startX + w * scale, bY + 8);
+  ctx.stroke();
+  
+  ctx.textAlign = "center";
+  ctx.fillText(`b = ${w} mm`, startX + (w * scale) / 2, bY + 22);
+
+  // Depth/Height (d) annotation - Left
+  const dX = startX - 35;
+  ctx.beginPath();
+  ctx.moveTo(dX, startY);
+  ctx.lineTo(dX, startY + h * scale);
+  ctx.moveTo(dX - 8, startY); ctx.lineTo(dX + 8, startY);
+  ctx.moveTo(dX - 8, startY + h * scale); ctx.lineTo(dX + 8, startY + h * scale);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(dX - 10, startY + (h * scale) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.fillText(`d = ${h} mm`, 0, 0);
+  ctx.restore();
+  ctx.textAlign = "left"; // reset
+
+  // Draw Scale Bar
+  const scaleRefCandidates = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
+  let scaleRef = 1;
+  for (const c of scaleRefCandidates) {
+    if (c <= Math.max(w, h) / 3) scaleRef = c;
+    else break;
+  }
+  
+  const scaleBarWidth = scaleRef * scale;
+  const barX = startX;
+  const barY = canvasHeight - padding - 20;
+
+  ctx.fillStyle = "#0f172a";
+  ctx.fillRect(barX, barY, scaleBarWidth, 4);
+  ctx.fillRect(barX, barY - 10, 4, 14);
+  ctx.fillRect(barX + scaleBarWidth - 4, barY - 10, 4, 14);
+  
+  ctx.font = "bold 22px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`${scaleRef} mm`, barX + scaleBarWidth / 2, barY - 15);
+  ctx.textAlign = "left";
+
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(leftWidth, padding);
+  ctx.lineTo(leftWidth, canvasHeight - padding);
+  ctx.stroke();
+
+  let textY = padding + 40;
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 34px sans-serif";
+  ctx.fillText("Geometric Properties", leftWidth + padding, textY);
+  textY += 60;
+
+  const addLine = (label: string, value: string) => {
+    ctx.font = "bold 22px sans-serif";
+    ctx.fillStyle = "#475569";
+    ctx.fillText(label, leftWidth + padding, textY);
+    ctx.font = "22px monospace";
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "right";
+    ctx.fillText(value, canvasWidth - padding, textY);
+    ctx.textAlign = "left";
+    
+    ctx.beginPath();
+    ctx.strokeStyle = "#f1f5f9";
+    ctx.setLineDash([4, 4]);
+    const labelW = ctx.measureText(label).width;
+    ctx.moveTo(leftWidth + padding + labelW + 15, textY - 6);
+    ctx.lineTo(canvasWidth - padding - 180, textY - 6);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    textY += 45;
+  };
+
+  addLine("Centroid X", `${(results.centroidX - ORIGIN_OFFSET).toFixed(1)} mm`);
+  addLine("Centroid Y", `${(results.centroidY - ORIGIN_OFFSET).toFixed(1)} mm`);
+  addLine("Area", `${results.area.toLocaleString()} mm²`);
+  addLine("Width", `${results.width} mm`);
+  addLine("Height", `${results.height} mm`);
+  textY += 20;
+
+  addLine("Moment Ix", `${results.Ix.toExponential(4)} mm⁴`);
+  addLine("Moment Iy", `${results.Iy.toExponential(4)} mm⁴`);
+  addLine("Product Ixy", `${results.Ixy.toExponential(4)} mm⁴`);
+  addLine("Polar Moment J", `${results.J.toExponential(4)} mm⁴`);
+  textY += 20;
+
+  addLine("Principal Imax", `${results.Imax.toExponential(4)} mm⁴`);
+  addLine("Principal Imin", `${results.Imin.toExponential(4)} mm⁴`);
+  addLine("Principal Angle", `${results.theta.toFixed(2)}°`);
+  textY += 20;
+
+  addLine("Elastic Zx", `${results.Zx.toExponential(4)} mm³`);
+  addLine("Elastic Zy", `${results.Zy.toExponential(4)} mm³`);
+  textY += 20;
+
+  addLine("Gyration kx", `${results.kx.toFixed(2)} mm`);
+  addLine("Gyration ky", `${results.ky.toFixed(2)} mm`);
+
+  const dataUrl = expCanvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = "InertiaCalc_Report.png";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 });
 
 btnUndo.addEventListener('click', () => {

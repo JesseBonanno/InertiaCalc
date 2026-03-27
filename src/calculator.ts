@@ -17,6 +17,10 @@ export interface SMAResults {
   Zx: number; // Elastic Section Modulus
   Zy: number;
   perimeter: number;
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
 }
 
 export type Action = 
@@ -124,7 +128,8 @@ export class SMACalculator {
       return { 
         count: 0, area: 0, width: 0, height: 0, centroidX: 0, centroidY: 0, 
         Ix: 0, Iy: 0, Ixy: 0, J: 0, Imax: 0, Imin: 0, theta: 0, 
-        kx: 0, ky: 0, Zx: 0, Zy: 0, perimeter: 0 
+        kx: 0, ky: 0, Zx: 0, Zy: 0, perimeter: 0,
+        xMin: 0, xMax: 0, yMin: 0, yMax: 0
       };
     }
 
@@ -186,7 +191,11 @@ export class SMACalculator {
       ky,
       Zx,
       Zy,
-      perimeter: p
+      perimeter: p,
+      xMin: this.xMin,
+      xMax: this.xMax,
+      yMin: this.yMin,
+      yMax: this.yMax
     };
   }
 
