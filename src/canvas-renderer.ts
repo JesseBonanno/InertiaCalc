@@ -119,7 +119,7 @@ export class CanvasRenderer {
     return step;
   }
 
-  public redraw(results: SMAResults, snapPos: {x: number, y: number} | null, mouseWorld: {x: number, y: number} | null, brushSize: number, ghostRect?: {w: number, h: number}, ghostISection?: {w: number, h: number, tf: number, tw: number}) {
+  public redraw(results: SMAResults, snapPos: {x: number, y: number} | null, mouseWorld: {x: number, y: number} | null, brushSize: number, ghostRect?: {w: number, h: number}, ghostCircle?: {r: number}, ghostISection?: {w: number, h: number, tf: number, tw: number}) {
     const { ctx, canvas, offCanvas, zoom, offsetX, offsetY, width, height } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -148,6 +148,10 @@ export class CanvasRenderer {
 
       if (ghostRect) {
         ctx.strokeRect(px - (ghostRect.w/2)*zoom, py - (ghostRect.h/2)*zoom, ghostRect.w*zoom, ghostRect.h*zoom);
+      } else if (ghostCircle) {
+        ctx.beginPath();
+        ctx.arc(px, py, ghostCircle.r * zoom, 0, Math.PI * 2);
+        ctx.stroke();
       } else if (ghostISection) {
         const { w, h, tf, tw } = ghostISection;
         // Top Flange

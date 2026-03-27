@@ -25,6 +25,7 @@ export interface SMAResults {
 
 export type Action = 
   | { type: 'rect'; x: number; y: number; w: number; h: number; active: boolean }
+  | { type: 'circle'; x: number; y: number; r: number; active: boolean }
   | { type: 'isection'; x: number; y: number; w: number; h: number; tf: number; tw: number; active: boolean }
   | { type: 'stroke'; points: {x: number, y: number}[]; size: number; active: boolean }
   | { type: 'clear' };
@@ -252,6 +253,9 @@ export class SMACalculator {
       case 'rect':
         this.drawRectInternal(action.x, action.y, action.w, action.h, action.active);
         break;
+      case 'circle':
+        this.drawCircleInternal(action.x, action.y, action.r, action.active);
+        break;
       case 'isection':
         this.drawISectionInternal(action.x, action.y, action.w, action.h, action.tf, action.tw, action.active);
         break;
@@ -283,6 +287,23 @@ export class SMACalculator {
     this.drawRectInternal(xPos, yPos + H/2 - tf/2, W, tf, active);
     // Web
     this.drawRectInternal(xPos, yPos, tw, H - 2*tf, active);
+  }
+  
+  private drawCircleInternal(xPos: number, yPos: number, r: number, active: boolean) {
+    const r2 = r * r;
+    const startX = Math.floor(xPos - r);
+    const endX = Math.ceil(xPos + r);
+    const startY = Math.floor(yPos - r);
+    const endY = Math.ceil(yPos + r);
+    for (let y = startY; y < endY; y++) {
+      for (let x = startX; x < endX; x++) {
+        const dx = x - xPos + 0.5;
+        const dy = y - yPos + 0.5;
+        if (dx*dx + dy*dy <= r2) {
+            this.setPixel(x, y, active);
+        }
+      }
+    }
   }
 
   private drawStrokeInternal(points: {x: number, y: number}[], size: number, active: boolean) {

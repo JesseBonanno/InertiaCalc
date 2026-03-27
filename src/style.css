@@ -48,21 +48,7 @@ canvas {
   pointer-events: auto;
 }
 
-#coordinate-display {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(8px);
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  font-family: var(--font-display);
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  z-index: 100;
-  pointer-events: none;
-}
+
 
 #app {
   display: flex;
@@ -117,14 +103,33 @@ canvas {
 
 .tool-group {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.tool-row {
+  display: flex;
   background: rgba(0, 0, 0, 0.2);
   padding: 4px;
   border-radius: 8px;
   gap: 4px;
 }
 
+.grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
 .tool-btn {
-  flex: 1;
   background: transparent;
   border: none;
   color: var(--text-secondary);
@@ -281,14 +286,19 @@ canvas {
 
 #coordinate-display {
   position: absolute;
-  bottom: 1.5rem;
-  left: 1.5rem;
-  padding: 0.5rem 1rem;
-  font-family: monospace;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  bottom: 1rem;
+  left: 1rem;
+  padding: 6px 12px;
+  font-family: 'Inter', monospace;
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   pointer-events: none;
-  z-index: 80;
+  z-index: 100;
+  white-space: nowrap;
 }
 
 /* Properties Sidebar */

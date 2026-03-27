@@ -8,36 +8,39 @@ const GRID_SIZE = 3000; // 3000mm x 3000mm
 const ORIGIN_OFFSET = 1500; // Engineering origin at center of 3m grid
 
 // State
-let currentTool: 'pen' | 'eraser' | 'rect' | 'isection' = 'pen';
+let currentMode: 'add' | 'subtract' = 'add';
+let currentShape: 'pen' | 'rect' | 'circle' | 'isection' = 'pen';
 let isDrawing = false;
 let isPanning = false;
 let lastMousePos = { x: 0, y: 0 };
-let snapEnabled = true;
 let currentStroke: { type: 'stroke', points: {x: number, y: number}[], size: number, active: boolean } | null = null;
 
 // DOM Elements
 const canvas = document.getElementById('main-canvas') as HTMLCanvasElement;
+const btnModeAdd = document.getElementById('btn-mode-add') as HTMLButtonElement;
+const btnModeSub = document.getElementById('btn-mode-sub') as HTMLButtonElement;
 const btnPen = document.getElementById('btn-pen') as HTMLButtonElement;
-const btnEraser = document.getElementById('btn-eraser') as HTMLButtonElement;
+const btnRect = document.getElementById('btn-rect') as HTMLButtonElement;
+const btnCircle = document.getElementById('btn-circle') as HTMLButtonElement;
+const btnISection = document.getElementById('btn-i-section') as HTMLButtonElement;
+
 const thicknessSlider = document.getElementById('thickness-slider') as HTMLInputElement;
 const thicknessValue = document.getElementById('thickness-value') as HTMLSpanElement;
 const thicknessContainer = document.getElementById('thickness-container') as HTMLDivElement;
-const eraserSlider = document.getElementById('eraser-slider') as HTMLInputElement;
-const eraserValue = document.getElementById('eraser-value') as HTMLSpanElement;
-const eraserContainer = document.getElementById('eraser-slider-container') as HTMLDivElement;
-const btnRect = document.getElementById('btn-rect') as HTMLButtonElement;
+
 const rectDimensionsContainer = document.getElementById('rect-dimensions-container') as HTMLDivElement;
 const rectWInput = document.getElementById('rect-w') as HTMLInputElement;
 const rectHInput = document.getElementById('rect-h') as HTMLInputElement;
-const btnISection = document.getElementById('btn-i-section') as HTMLButtonElement;
+
+const circleDimensionsContainer = document.getElementById('circle-dimensions-container') as HTMLDivElement;
+const circleRInput = document.getElementById('circle-r') as HTMLInputElement;
+
 const iSectionDimensionsContainer = document.getElementById('i-section-dimensions-container') as HTMLDivElement;
 const iWInput = document.getElementById('i-w') as HTMLInputElement;
 const iHInput = document.getElementById('i-h') as HTMLInputElement;
 const iTFInput = document.getElementById('i-tf') as HTMLInputElement;
 const iTWInput = document.getElementById('i-tw') as HTMLInputElement;
-const btnSnap = document.getElementById('btn-snap') as HTMLButtonElement;
-const snapSliderContainer = document.getElementById('snap-slider-container') as HTMLDivElement;
-const snapDivider = document.getElementById('snap-divider') as HTMLDivElement;
+
 const snapSizeSlider = document.getElementById('snap-size-slider') as HTMLInputElement;
 const snapSizeValue = document.getElementById('snap-size-value') as HTMLSpanElement;
 const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
@@ -112,10 +115,8 @@ function updateUI() {
 }
 
 function getSnapPos(worldX: number, worldY: number) {
-  if (!snapEnabled) return { x: Math.floor(worldX), y: Math.floor(worldY) };
-  
-  let snap = parseInt(snapSizeSlider.value, 10);
-  if (snap === 0) snap = 1; // Treat 0 as 1mm (no-snap/fine-mode)
+  const snap = parseInt(snapSizeSlider.value, 10);
+  if (snap === 0) return { x: Math.floor(worldX), y: Math.floor(worldY) };
 
   const snappedX = Math.round(worldX / snap) * snap;
   const snappedY = Math.round(worldY / snap) * snap;
@@ -125,9 +126,10 @@ function getSnapPos(worldX: number, worldY: number) {
 
 function drawAt(worldX: number, worldY: number) {
   const snapPos = getSnapPos(worldX, worldY);
+  const active = currentMode === 'add';
   let changed = false;
 
-  if (currentTool === 'rect') {
+  if (currentShape === 'rect') {
     const w = parseInt(rectWInput.value, 10);
     const h = parseInt(rectHInput.value, 10);
     
@@ -137,13 +139,27 @@ function drawAt(worldX: number, worldY: number) {
       y: snapPos.y,
       w: w,
       h: h,
-      active: true
+      active
     });
     calculator.executeAction(calculator.history[calculator.history.length - 1]);
     renderer.syncFromData(calculator.getGrid());
     changed = true;
     isDrawing = false; // Discrete action
-  } else if (currentTool === 'isection') {
+  } else if (currentShape === 'circle') {
+    const r = parseInt(circleRInput.value, 10);
+    
+    calculator.addAction({
+      type: 'circle',
+      x: snapPos.x,
+      y: snapPos.y,
+      r: r,
+      active
+    });
+    calculator.executeAction(calculator.history[calculator.history.length - 1]);
+    renderer.syncFromData(calculator.getGrid());
+    changed = true;
+    isDrawing = false; // Discrete action
+  } else if (currentShape === 'isection') {
     const W = parseInt(iWInput.value, 10);
     const H = parseInt(iHInput.value, 10);
     const tf = parseInt(iTFInput.value, 10);
@@ -157,18 +173,15 @@ function drawAt(worldX: number, worldY: number) {
       h: H,
       tf: tf,
       tw: tw,
-      active: true
+      active
     });
     calculator.executeAction(calculator.history[calculator.history.length - 1]);
     renderer.syncFromData(calculator.getGrid());
     changed = true;
     isDrawing = false; // Discrete action
   } else {
-    // Pen or Eraser (Stroke)
-    const thickness = currentTool === 'pen' 
-      ? parseInt(thicknessSlider.value, 10) 
-      : parseInt(eraserSlider.value, 10);
-    const active = currentTool === 'pen';
+    // Pen (Stroke)
+    const thickness = parseInt(thicknessSlider.value, 10);
 
     if (!currentStroke) {
       currentStroke = {
@@ -262,110 +275,75 @@ canvas.addEventListener('wheel', (e) => {
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-// Tool UI
-btnPen.addEventListener('click', () => {
-  currentTool = 'pen';
-  btnPen.classList.add('active');
-  btnEraser.classList.remove('active');
-  btnRect.classList.remove('active');
-  btnISection.classList.remove('active');
-  thicknessContainer.style.display = 'flex';
-  eraserContainer.style.display = 'none';
-  rectDimensionsContainer.style.display = 'none';
-  iSectionDimensionsContainer.style.display = 'none';
+// Mode UI
+btnModeAdd.addEventListener('click', () => {
+  currentMode = 'add';
+  btnModeAdd.classList.add('active');
+  btnModeSub.classList.remove('active');
 });
 
-btnEraser.addEventListener('click', () => {
-  currentTool = 'eraser';
-  btnEraser.classList.add('active');
-  btnPen.classList.remove('active');
+btnModeSub.addEventListener('click', () => {
+  currentMode = 'subtract';
+  btnModeSub.classList.add('active');
+  btnModeAdd.classList.remove('active');
+});
+
+// Shape UI
+btnPen.addEventListener('click', () => {
+  currentShape = 'pen';
+  btnPen.classList.add('active');
   btnRect.classList.remove('active');
+  btnCircle.classList.remove('active');
   btnISection.classList.remove('active');
-  thicknessContainer.style.display = 'none';
-  eraserContainer.style.display = 'flex';
+  thicknessContainer.style.display = 'flex';
   rectDimensionsContainer.style.display = 'none';
+  circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'none';
 });
 
 btnRect.addEventListener('click', () => {
-  currentTool = 'rect';
+  currentShape = 'rect';
   btnRect.classList.add('active');
   btnPen.classList.remove('active');
-  btnEraser.classList.remove('active');
+  btnCircle.classList.remove('active');
   btnISection.classList.remove('active');
   thicknessContainer.style.display = 'none';
-  eraserContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'block';
+  circleDimensionsContainer.style.display = 'none';
+  iSectionDimensionsContainer.style.display = 'none';
+});
+
+btnCircle.addEventListener('click', () => {
+  currentShape = 'circle';
+  btnCircle.classList.add('active');
+  btnPen.classList.remove('active');
+  btnRect.classList.remove('active');
+  btnISection.classList.remove('active');
+  thicknessContainer.style.display = 'none';
+  rectDimensionsContainer.style.display = 'none';
+  circleDimensionsContainer.style.display = 'block';
   iSectionDimensionsContainer.style.display = 'none';
 });
 
 btnISection.addEventListener('click', () => {
-  currentTool = 'isection';
+  currentShape = 'isection';
   btnISection.classList.add('active');
   btnPen.classList.remove('active');
-  btnEraser.classList.remove('active');
   btnRect.classList.remove('active');
+  btnCircle.classList.remove('active');
   thicknessContainer.style.display = 'none';
-  eraserContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'none';
+  circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'block';
 });
 
-function enforceThicknessConstraint() {
-  let snap = parseInt(snapSizeSlider.value, 10);
-  if (snap === 0) snap = 1;
-
-  const thickness = parseInt(thicknessSlider.value, 10);
-  const eraser = parseInt(eraserSlider.value, 10);
-  
-  if (thickness < snap) {
-    thicknessSlider.value = snap.toString();
-    thicknessValue.textContent = snap.toString();
-  }
-  if (eraser < snap) {
-    eraserSlider.value = snap.toString();
-    eraserValue.textContent = snap.toString();
-  }
-}
-
-function enforceSnapConstraint() {
-  const currentSnap = parseInt(snapSizeSlider.value, 10);
-  const activeSize = currentTool === 'pen' ? parseInt(thicknessSlider.value, 10) : parseInt(eraserSlider.value, 10);
-  
-  if (currentSnap > activeSize) {
-    const snap = Math.max(0, Math.floor(activeSize / 5) * 5);
-    snapSizeSlider.value = snap.toString();
-    snapSizeValue.textContent = snap === 0 ? '0' : snap.toString();
-  }
-}
-
 thicknessSlider.addEventListener('input', () => {
   thicknessValue.textContent = thicknessSlider.value;
-  enforceSnapConstraint();
-});
-
-eraserSlider.addEventListener('input', () => {
-  eraserValue.textContent = eraserSlider.value;
-  enforceSnapConstraint();
 });
 
 snapSizeSlider.addEventListener('input', () => {
-  enforceThicknessConstraint();
   const val = parseInt(snapSizeSlider.value, 10);
   snapSizeValue.textContent = val === 0 ? '0' : val.toString();
-});
-
-btnSnap.addEventListener('click', () => {
-  snapEnabled = !snapEnabled;
-  if (snapEnabled) {
-    btnSnap.classList.add('active');
-    snapSliderContainer.style.display = 'flex';
-    snapDivider.style.display = 'block';
-  } else {
-    btnSnap.classList.remove('active');
-    snapSliderContainer.style.display = 'none';
-    snapDivider.style.display = 'none';
-  }
 });
 
 btnClear.addEventListener('click', () => {
@@ -422,16 +400,12 @@ btnExportPng.addEventListener('click', () => {
 
   ctx.fillStyle = "#0f172a";
   
-  // Use a fast path: if scale is >= 1, draw individual rects. 
-  // If scale < 1, drawn rects might alias badly with fillRect, but this simple method usually suffices.
-  // For safety, ceil the scale to prevent gaps if scale is > 1.
   const drawScale = Math.max(scale, 1.0); 
 
   for (let y = yMin; y <= yMax; y++) {
     for (let x = xMin; x <= xMax; x++) {
       const idx = y * GRID_SIZE + x;
       if (grid[idx] === 1) {
-        // Draw slightly overlapping rects to prevent sub-pixel seams
         ctx.fillRect(Math.floor(startX + (x - xMin) * scale), Math.floor(startY + (y - yMin) * scale), Math.ceil(drawScale), Math.ceil(drawScale));
       }
     }
@@ -449,13 +423,12 @@ btnExportPng.addEventListener('click', () => {
   ctx.moveTo(cxDraw, cyDraw - 40); ctx.lineTo(cxDraw, cyDraw + 40);
   ctx.stroke();
 
-  // Draw Bounding Box Annotations (b and d)
-  ctx.strokeStyle = "#475569"; // slate-600
+  // Annotations
+  ctx.strokeStyle = "#475569";
   ctx.fillStyle = "#475569";
   ctx.lineWidth = 1.5;
   ctx.font = "italic 20px sans-serif";
 
-  // Width (b) annotation - Bottom
   const bY = startY + (h * scale) + 25;
   ctx.beginPath();
   ctx.moveTo(startX, bY);
@@ -463,11 +436,9 @@ btnExportPng.addEventListener('click', () => {
   ctx.moveTo(startX, bY - 8); ctx.lineTo(startX, bY + 8);
   ctx.moveTo(startX + w * scale, bY - 8); ctx.lineTo(startX + w * scale, bY + 8);
   ctx.stroke();
-  
   ctx.textAlign = "center";
   ctx.fillText(`b = ${w} mm`, startX + (w * scale) / 2, bY + 22);
 
-  // Depth/Height (d) annotation - Left
   const dX = startX - 35;
   ctx.beginPath();
   ctx.moveTo(dX, startY);
@@ -475,32 +446,27 @@ btnExportPng.addEventListener('click', () => {
   ctx.moveTo(dX - 8, startY); ctx.lineTo(dX + 8, startY);
   ctx.moveTo(dX - 8, startY + h * scale); ctx.lineTo(dX + 8, startY + h * scale);
   ctx.stroke();
-
   ctx.save();
   ctx.translate(dX - 10, startY + (h * scale) / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = "center";
   ctx.fillText(`d = ${h} mm`, 0, 0);
   ctx.restore();
-  ctx.textAlign = "left"; // reset
+  ctx.textAlign = "left";
 
-  // Draw Scale Bar
   const scaleRefCandidates = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
   let scaleRef = 1;
   for (const c of scaleRefCandidates) {
     if (c <= Math.max(w, h) / 3) scaleRef = c;
     else break;
   }
-  
   const scaleBarWidth = scaleRef * scale;
   const barX = startX;
   const barY = canvasHeight - padding - 20;
-
   ctx.fillStyle = "#0f172a";
   ctx.fillRect(barX, barY, scaleBarWidth, 4);
   ctx.fillRect(barX, barY - 10, 4, 14);
   ctx.fillRect(barX + scaleBarWidth - 4, barY - 10, 4, 14);
-  
   ctx.font = "bold 22px sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(`${scaleRef} mm`, barX + scaleBarWidth / 2, barY - 15);
@@ -528,7 +494,6 @@ btnExportPng.addEventListener('click', () => {
     ctx.textAlign = "right";
     ctx.fillText(value, canvasWidth - padding, textY);
     ctx.textAlign = "left";
-    
     ctx.beginPath();
     ctx.strokeStyle = "#f1f5f9";
     ctx.setLineDash([4, 4]);
@@ -537,7 +502,6 @@ btnExportPng.addEventListener('click', () => {
     ctx.lineTo(canvasWidth - padding - 180, textY - 6);
     ctx.stroke();
     ctx.setLineDash([]);
-    
     textY += 45;
   };
 
@@ -547,22 +511,18 @@ btnExportPng.addEventListener('click', () => {
   addLine("Width", `${results.width} mm`);
   addLine("Height", `${results.height} mm`);
   textY += 20;
-
   addLine("Moment Ix", `${results.Ix.toExponential(4)} mm⁴`);
   addLine("Moment Iy", `${results.Iy.toExponential(4)} mm⁴`);
   addLine("Product Ixy", `${results.Ixy.toExponential(4)} mm⁴`);
   addLine("Polar Moment J", `${results.J.toExponential(4)} mm⁴`);
   textY += 20;
-
   addLine("Principal Imax", `${results.Imax.toExponential(4)} mm⁴`);
   addLine("Principal Imin", `${results.Imin.toExponential(4)} mm⁴`);
   addLine("Principal Angle", `${results.theta.toFixed(2)}°`);
   textY += 20;
-
   addLine("Elastic Zx", `${results.Zx.toExponential(4)} mm³`);
   addLine("Elastic Zy", `${results.Zy.toExponential(4)} mm³`);
   textY += 20;
-
   addLine("Gyration kx", `${results.kx.toFixed(2)} mm`);
   addLine("Gyration ky", `${results.ky.toFixed(2)} mm`);
 
@@ -591,9 +551,11 @@ btnRedo.addEventListener('click', () => {
 
 // Shortcuts
 window.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'a') btnModeAdd.click();
+  if (e.key.toLowerCase() === 's' && !e.ctrlKey) btnModeSub.click();
   if (e.key.toLowerCase() === 'p') btnPen.click();
-  if (e.key.toLowerCase() === 'e') btnEraser.click();
   if (e.key.toLowerCase() === 'r') btnRect.click();
+  if (e.key.toLowerCase() === 'c') btnCircle.click();
   if (e.key.toLowerCase() === 'i') btnISection.click();
   if (e.key.toLowerCase() === 'v') btnReset.click();
   
@@ -601,11 +563,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     btnUndo.click();
   }
-  if (e.ctrlKey && e.key.toLowerCase() === 'y') {
-    e.preventDefault();
-    btnRedo.click();
-  }
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+  if (e.ctrlKey && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
     e.preventDefault();
     btnRedo.click();
   }
@@ -617,23 +575,25 @@ let lastMouseWorld: {x: number, y: number} | null = null;
 function loop() {
   const results = calculator.getResults();
   const snapPos = lastMouseWorld ? getSnapPos(lastMouseWorld.x, lastMouseWorld.y) : null;
-  const brushSize = currentTool === 'rect' ? 0 : (currentTool === 'pen' 
-    ? parseInt(thicknessSlider.value, 10) 
-    : parseInt(eraserSlider.value, 10));
+  const brushSize = currentShape === 'pen' ? parseInt(thicknessSlider.value, 10) : 0;
 
-  const ghostRect = currentTool === 'rect' ? {
+  const ghostRect = currentShape === 'rect' ? {
     w: parseInt(rectWInput.value, 10),
     h: parseInt(rectHInput.value, 10)
   } : undefined;
 
-  const ghostISection = currentTool === 'isection' ? {
+  const ghostCircle = currentShape === 'circle' ? {
+    r: parseInt(circleRInput.value, 10)
+  } : undefined;
+
+  const ghostISection = currentShape === 'isection' ? {
     w: parseInt(iWInput.value, 10),
     h: parseInt(iHInput.value, 10),
     tf: parseInt(iTFInput.value, 10),
     tw: parseInt(iTWInput.value, 10),
   } : undefined;
   
-  renderer.redraw(results, snapPos, lastMouseWorld, brushSize, ghostRect, ghostISection);
+  renderer.redraw(results, snapPos, lastMouseWorld, brushSize, ghostRect, ghostCircle, ghostISection);
   requestAnimationFrame(loop);
 }
 
