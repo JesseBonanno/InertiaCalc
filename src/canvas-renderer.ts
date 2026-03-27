@@ -158,8 +158,8 @@ export class CanvasRenderer {
         ctx.strokeRect(px - (tw/2)*zoom, py - (h/2 - tf)*zoom, tw*zoom, (h - 2*tf)*zoom);
       } else {
         // Pixel-perfect brush alignment matching main.ts
-        const bx = Math.floor(snapPos.x - (brushSize - 1) / 2);
-        const by = Math.floor(snapPos.y - (brushSize - 1) / 2);
+        const bx = Math.floor((snapPos ? snapPos.x : mouseWorld.x) - (brushSize - 1) / 2);
+        const by = Math.floor((snapPos ? snapPos.y : mouseWorld.y) - (brushSize - 1) / 2);
         ctx.strokeRect(bx * zoom + offsetX, by * zoom + offsetY, brushSize * zoom, brushSize * zoom);
       }
       
