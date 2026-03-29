@@ -79,21 +79,33 @@
           </div>
 
           <!-- I-Section Tool Dimensions -->
-          <div id="i-section-dimensions-container" style="display: none;">
+          <div id="i-section-dimensions-container" class="grid-2col" style="display: none;">
             <div class="setting-group">
-                <div class="label-row"><label>Total Width (W)</label></div>
+                <div class="label-row">
+                  <label>Width (W)</label>
+                  <span class="info-icon" data-tip="The total horizontal width of the top and bottom flanges.">?</span>
+                </div>
                 <input type="number" id="i-w" value="172" min="1" max="1000" class="num-input">
             </div>
-            <div class="setting-group" style="margin-top: 0.75rem;">
-                <div class="label-row"><label>Total Height (H)</label></div>
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Height (H)</label>
+                  <span class="info-icon" data-tip="The overall vertical height from the outer face of the top flange to the outer face of the bottom flange.">?</span>
+                </div>
                 <input type="number" id="i-h" value="359" min="1" max="1000" class="num-input">
             </div>
-            <div class="setting-group" style="margin-top: 0.75rem;">
-                <div class="label-row"><label>Flange Thickness (tf)</label></div>
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Flange (tf)</label>
+                  <span class="info-icon" data-tip="The thickness of the top and bottom horizontal flanges.">?</span>
+                </div>
                 <input type="number" id="i-tf" value="13" min="1" max="500" class="num-input">
             </div>
-            <div class="setting-group" style="margin-top: 0.75rem;">
-                <div class="label-row"><label>Web Thickness (tw)</label></div>
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Web (tw)</label>
+                  <span class="info-icon" data-tip="The thickness of the central vertical connecting web.">?</span>
+                </div>
                 <input type="number" id="i-tw" value="8" min="1" max="500" class="num-input">
             </div>
           </div>

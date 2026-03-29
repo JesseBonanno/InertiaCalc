@@ -172,6 +172,35 @@ canvas {
   flex-direction: column;
 }
 
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 0.75rem;
+}
+
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 10px;
+  cursor: help;
+  margin-left: 6px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.info-icon:hover {
+  background: var(--accent);
+  color: var(--bg-dark);
+  border-color: var(--accent);
+}
+
 .label-row {
   display: flex;
   justify-content: space-between;
@@ -630,7 +659,7 @@ canvas:focus {
     border-left: none;
     border-right: none;
     padding: 1.5rem;
-    padding-bottom: 2.5rem;
+    padding-bottom: 8rem;
     max-height: 85vh;
     overflow-y: auto;
     transform: translateY(120%);
@@ -653,7 +682,7 @@ canvas:focus {
     border-left: none;
     border-right: none;
     border-top: 1px solid var(--border);
-    padding-bottom: 2.5rem;
+    padding-bottom: 8rem;
     transform: translateY(120%);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);

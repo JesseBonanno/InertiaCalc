@@ -407,7 +407,7 @@ btnISection.addEventListener('click', () => {
   snapSliderContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'none';
-  iSectionDimensionsContainer.style.display = 'block';
+  iSectionDimensionsContainer.style.display = 'grid';
 });
 
 thicknessSlider.addEventListener('input', () => {
