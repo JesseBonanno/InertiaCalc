@@ -65,6 +65,22 @@ const valImin = document.getElementById('val-imin') as HTMLSpanElement;
 const valTheta = document.getElementById('val-theta') as HTMLSpanElement;
 const globalTooltip = document.getElementById('global-tooltip') as HTMLDivElement;
 
+// Mobile UI Elements
+const btnToggleTools = document.getElementById('btn-toggle-tools') as HTMLButtonElement;
+const btnToggleProps = document.getElementById('btn-toggle-props') as HTMLButtonElement;
+const btnCloseTools = document.getElementById('btn-close-tools') as HTMLButtonElement;
+const btnCloseProps = document.getElementById('btn-close-props') as HTMLButtonElement;
+const mainToolbox = document.getElementById('main-toolbox') as HTMLDivElement;
+const propertiesSidebar = document.getElementById('properties-sidebar') as HTMLDivElement;
+
+function closeAllMobilePanels(): boolean {
+  const wasToolboxOpen = mainToolbox.classList.contains('mobile-open');
+  const wasSidebarOpen = propertiesSidebar.classList.contains('mobile-open');
+  mainToolbox.classList.remove('mobile-open');
+  propertiesSidebar.classList.remove('mobile-open');
+  return wasToolboxOpen || wasSidebarOpen; // Returns true if anything was actually closed
+}
+
 // Instances
 const calculator = new SMACalculator(GRID_SIZE, GRID_SIZE);
 const renderer = new CanvasRenderer(canvas, GRID_SIZE, GRID_SIZE);
@@ -224,8 +240,19 @@ window.addEventListener('resize', () => {
   renderer.resize();
 });
 
-canvas.addEventListener('mousedown', (e) => {
-  if (e.button === 0) { // Left click
+canvas.addEventListener('pointerdown', (e) => {
+  // Always close mobile panels if interaction with canvas begins
+  const closedPanel = closeAllMobilePanels();
+
+  // If a menu was closed, don't draw or pan. Just focus the grid.
+  if (closedPanel) {
+    return;
+  }
+
+  // Set pointer capture to ensure smooth tracking off-canvas and to unify touch/mouse
+  canvas.setPointerCapture(e.pointerId);
+
+  if (e.button === 0) { // Left click / primary touch
     // Always start a fresh stroke state
     currentStroke = null;
     isDrawing = true;
@@ -238,7 +265,7 @@ canvas.addEventListener('mousedown', (e) => {
   }
 });
 
-window.addEventListener('mousemove', (e) => {
+window.addEventListener('pointermove', (e) => {
   lastMouseWorld = renderer.screenToWorld(e.clientX, e.clientY);
   
   if (lastMouseWorld) {
@@ -258,7 +285,11 @@ window.addEventListener('mousemove', (e) => {
   }
 });
 
-window.addEventListener('mouseup', async () => {
+window.addEventListener('pointerup', async (e) => {
+  try {
+    canvas.releasePointerCapture(e.pointerId);
+  } catch (err) { /* ignore if already released */ }
+
   if (isDrawing && currentStroke) {
     calculator.addAction(currentStroke);
     
@@ -283,6 +314,26 @@ canvas.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Mobile UI Links
+btnToggleTools.addEventListener('click', () => {
+  const isCurrentlyOpen = mainToolbox.classList.contains('mobile-open');
+  closeAllMobilePanels();
+  if (!isCurrentlyOpen) {
+    mainToolbox.classList.add('mobile-open');
+  }
+});
+
+btnToggleProps.addEventListener('click', () => {
+  const isCurrentlyOpen = propertiesSidebar.classList.contains('mobile-open');
+  closeAllMobilePanels();
+  if (!isCurrentlyOpen) {
+    propertiesSidebar.classList.add('mobile-open');
+  }
+});
+
+btnCloseTools.addEventListener('click', () => closeAllMobilePanels());
+btnCloseProps.addEventListener('click', () => closeAllMobilePanels());
 
 // Mode UI
 btnModeAdd.addEventListener('click', () => {
