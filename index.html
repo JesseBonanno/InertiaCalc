@@ -16,8 +16,8 @@
       <div class="glass-toolbox" id="main-toolbox">
         <div class="toolbox-header-row">
           <div class="logo">InertiaCalc</div>
-          <button id="btn-close-tools" class="mobile-close-btn" title="Close Tools">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <button id="btn-close-tools" class="panel-toggle-btn" title="Minimize/Close Tools">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
         </div>
         
@@ -49,8 +49,13 @@
         <div class="sliders-section">
           <!-- Brush settings -->
           <div class="setting-group" id="thickness-container">
-            <div class="label-row"><label for="thickness-slider">Size</label> <span class="val-badge"><span id="thickness-value">5</span>mm</span></div>
+            <div class="label-row"><label id="thickness-label" for="thickness-slider">Pen Size</label> <span class="val-badge"><span id="thickness-value">5</span>mm</span></div>
             <input type="range" id="thickness-slider" min="1" max="50" value="5">
+          </div>
+
+          <div class="setting-group" id="snap-slider-container" style="margin-top: 0.75rem;">
+            <div class="label-row"><label for="snap-size-slider">Snap Size</label> <span class="val-badge"><span id="snap-size-value">5</span>mm</span></div>
+            <input type="range" id="snap-size-slider" min="0" max="50" step="5" value="5">
           </div>
 
           <!-- Square Tool Dimensions -->
@@ -93,12 +98,6 @@
             </div>
           </div>
 
-          <div class="divider-horizontal"></div>
-
-          <div class="setting-group" id="snap-slider-container">
-            <div class="label-row"><label for="snap-size-slider">Snap Size</label> <span class="val-badge"><span id="snap-size-value">5</span>mm</span></div>
-            <input type="range" id="snap-size-slider" min="0" max="50" step="5" value="5">
-          </div>
         </div>
 
         <div class="actions-section">
@@ -113,8 +112,7 @@
             </button>
           </div>
           <button id="btn-clear" class="danger-btn" title="Clear All">Clear All</button>
-          <button id="btn-reset-view" class="secondary-btn" title="Reset View (R)">Reset View</button>
-          <button id="btn-export-png" class="secondary-btn" style="margin-top: 10px; width: 100%; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;" title="Export PNG Report">
+          <button id="btn-export-png" class="secondary-btn export-btn" title="Export PNG Report">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: text-bottom;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export Report
           </button>
@@ -129,135 +127,144 @@
       <aside class="glass-panel properties-sidebar" id="properties-sidebar">
         <div class="sidebar-header">
           <span>Geometric Properties</span>
-          <button id="btn-close-props" class="mobile-close-btn" title="Close Properties">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <button id="btn-close-props" class="panel-toggle-btn" title="Minimize/Close Properties">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
         </div>
         
         <div class="property-list">
           <!-- Section 1: General -->
-          <div class="sidebar-sub-header">General</div>
-          
-          <div class="result-item">
-            <span class="label">
-              Centroid (X, Y)
-              <span class="info-icon" data-tip="Geometric center of the shape. Point where the section is perfectly balanced.">?</span>
-            </span>
-            <span class="value" id="val-centroid">(0.0, 0.0) mm</span>
-          </div>
+          <div class="collapsible-section">
+            <div class="sidebar-sub-header">General <span class="toggle-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></div>
+            <div class="section-content">
+              <div class="result-item">
+                <span class="label">
+                  Centroid (X, Y)
+                  <span class="info-icon" data-tip="Geometric center of the shape. Point where the section is perfectly balanced.">?</span>
+                </span>
+                <span class="value" id="val-centroid">(0.0, 0.0) mm</span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Area
-              <span class="info-icon" data-tip="Total surface area of the cross-section in square millimeters.">?</span>
-            </span>
-            <span class="value" id="val-area">0 <small>mm&sup2;</small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Area
+                  <span class="info-icon" data-tip="Total surface area of the cross-section in square millimeters.">?</span>
+                </span>
+                <span class="value" id="val-area">0 <small>mm&sup2;</small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Bounding Box
-              <span class="info-icon" data-tip="The maximum width and height occupied by the section.">?</span>
-            </span>
-            <span class="value" id="val-dims">0 x 0 <small>mm</small></span>
+              <div class="result-item">
+                <span class="label">
+                  Bounding Box
+                  <span class="info-icon" data-tip="The maximum width and height occupied by the section.">?</span>
+                </span>
+                <span class="value" id="val-dims">0 x 0 <small>mm</small></span>
+              </div>
+            </div>
           </div>
 
           <div class="divider-horizontal"></div>
 
           <!-- Section 2: Bending & Buckling -->
-          <div class="sidebar-sub-header">Bending & Buckling</div>
+          <div class="collapsible-section">
+            <div class="sidebar-sub-header">Bending & Buckling <span class="toggle-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></div>
+            <div class="section-content">
+              <div class="result-item">
+                <span class="label">
+                  Moment I<sub>x</sub>
+                  <span class="info-icon" data-tip="Second moment of area about the horizontal axis. Defines stiffness against vertical bending.">?</span>
+                </span>
+                <span class="value accent" id="val-ix">0.000e+0 <small>mm<sup>4</sup></small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Moment I<sub>x</sub>
-              <span class="info-icon" data-tip="Second moment of area about the horizontal axis. Defines stiffness against vertical bending.">?</span>
-            </span>
-            <span class="value accent" id="val-ix">0.000e+0 <small>mm<sup>4</sup></small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Moment I<sub>y</sub>
+                  <span class="info-icon" data-tip="Second moment of area about the vertical axis. Defines stiffness against horizontal bending.">?</span>
+                </span>
+                <span class="value accent" id="val-iy">0.000e+0 <small>mm<sup>4</sup></small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Moment I<sub>y</sub>
-              <span class="info-icon" data-tip="Second moment of area about the vertical axis. Defines stiffness against horizontal bending.">?</span>
-            </span>
-            <span class="value accent" id="val-iy">0.000e+0 <small>mm<sup>4</sup></small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Elastic Modulus Z<sub>x</sub>
+                  <span class="info-icon" data-tip="Used to calculate bending stress (σ = M/Z). Higher Z means lower stress for the same load.">?</span>
+                </span>
+                <span class="value" id="val-zx">0.000e+0 <small>mm&sup3;</small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Elastic Modulus Z<sub>x</sub>
-              <span class="info-icon" data-tip="Used to calculate bending stress (σ = M/Z). Higher Z means lower stress for the same load.">?</span>
-            </span>
-            <span class="value" id="val-zx">0.000e+0 <small>mm&sup3;</small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Elastic Modulus Z<sub>y</sub>
+                  <span class="info-icon" data-tip="Bending capacity about the vertical axis in the elastic range.">?</span>
+                </span>
+                <span class="value" id="val-zy">0.000e+0 <small>mm&sup3;</small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Elastic Modulus Z<sub>y</sub>
-              <span class="info-icon" data-tip="Bending capacity about the vertical axis in the elastic range.">?</span>
-            </span>
-            <span class="value" id="val-zy">0.000e+0 <small>mm&sup3;</small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Radius Gyration k<sub>x</sub>
+                  <span class="info-icon" data-tip="Measures efficiency at resisting buckling. Key for column design.">?</span>
+                </span>
+                <span class="value" id="val-kx">0.0 <small>mm</small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Radius Gyration k<sub>x</sub>
-              <span class="info-icon" data-tip="Measures efficiency at resisting buckling. Key for column design.">?</span>
-            </span>
-            <span class="value" id="val-kx">0.0 <small>mm</small></span>
-          </div>
-
-          <div class="result-item">
-            <span class="label">
-              Radius Gyration k<sub>y</sub>
-              <span class="info-icon" data-tip="Buckling resistance about the vertical axis.">?</span>
-            </span>
-            <span class="value" id="val-ky">0.0 <small>mm</small></span>
+              <div class="result-item">
+                <span class="label">
+                  Radius Gyration k<sub>y</sub>
+                  <span class="info-icon" data-tip="Buckling resistance about the vertical axis.">?</span>
+                </span>
+                <span class="value" id="val-ky">0.0 <small>mm</small></span>
+              </div>
+            </div>
           </div>
 
           <div class="divider-horizontal"></div>
 
           <!-- Section 3: Principal Analysis -->
-          <div class="sidebar-sub-header">Principal Axes</div>
+          <div class="collapsible-section">
+            <div class="sidebar-sub-header">Principal Axes <span class="toggle-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></div>
+            <div class="section-content">
+              <div class="result-item">
+                <span class="label">
+                  Product I<sub>xy</sub>
+                  <span class="info-icon" data-tip="Product of inertia. Zero for symmetric shapes; indicates asymmetrical bending.">?</span>
+                </span>
+                <span class="value" id="val-ixy">0.000e+0 <small>mm<sup>4</sup></small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Product I<sub>xy</sub>
-              <span class="info-icon" data-tip="Product of inertia. Zero for symmetric shapes; indicates asymmetrical bending.">?</span>
-            </span>
-            <span class="value" id="val-ixy">0.000e+0 <small>mm<sup>4</sup></small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Polar Moment J
+                  <span class="info-icon" data-tip="Torsional constant. Measures resistance to twisting.">?</span>
+                </span>
+                <span class="value" id="val-polar">0.000e+0 <small>mm<sup>4</sup></small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Polar Moment J
-              <span class="info-icon" data-tip="Torsional constant. Measures resistance to twisting.">?</span>
-            </span>
-            <span class="value" id="val-polar">0.000e+0 <small>mm<sup>4</sup></small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Max Moment I<sub>max</sub>
+                  <span class="info-icon" data-tip="The maximum possible stiffness of the section along its strongest axis.">?</span>
+                </span>
+                <span class="value accent" id="val-imax">0.000e+0 <small>mm<sup>4</sup></small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Max Moment I<sub>max</sub>
-              <span class="info-icon" data-tip="The maximum possible stiffness of the section along its strongest axis.">?</span>
-            </span>
-            <span class="value accent" id="val-imax">0.000e+0 <small>mm<sup>4</sup></small></span>
-          </div>
+              <div class="result-item">
+                <span class="label">
+                  Min Moment I<sub>min</sub>
+                  <span class="info-icon" data-tip="The minimum stiffness of the section along its weakest axis.">?</span>
+                </span>
+                <span class="value accent" id="val-imin">0.000e+0 <small>mm<sup>4</sup></small></span>
+              </div>
 
-          <div class="result-item">
-            <span class="label">
-              Min Moment I<sub>min</sub>
-              <span class="info-icon" data-tip="The minimum stiffness of the section along its weakest axis.">?</span>
-            </span>
-            <span class="value accent" id="val-imin">0.000e+0 <small>mm<sup>4</sup></small></span>
-          </div>
-
-          <div class="result-item">
-            <span class="label">
-              Principal Angle &theta;<sub>p</sub>
-              <span class="info-icon" data-tip="Rotation from the horizontal axis to the strongest principal axis.">?</span>
-            </span>
-            <span class="value" id="val-theta">0.0&deg;</span>
+              <div class="result-item">
+                <span class="label">
+                  Principal Angle &theta;<sub>p</sub>
+                  <span class="info-icon" data-tip="Rotation from the horizontal axis to the strongest principal axis.">?</span>
+                </span>
+                <span class="value" id="val-theta">0.0&deg;</span>
+              </div>
+            </div>
           </div>
         </div>
       </aside>

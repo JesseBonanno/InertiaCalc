@@ -27,6 +27,8 @@ const btnISection = document.getElementById('btn-i-section') as HTMLButtonElemen
 const thicknessSlider = document.getElementById('thickness-slider') as HTMLInputElement;
 const thicknessValue = document.getElementById('thickness-value') as HTMLSpanElement;
 const thicknessContainer = document.getElementById('thickness-container') as HTMLDivElement;
+const thicknessLabel = document.getElementById('thickness-label') as HTMLLabelElement;
+const snapSliderContainer = document.getElementById('snap-slider-container') as HTMLDivElement;
 
 const rectDimensionsContainer = document.getElementById('rect-dimensions-container') as HTMLDivElement;
 const rectWInput = document.getElementById('rect-w') as HTMLInputElement;
@@ -44,7 +46,6 @@ const iTWInput = document.getElementById('i-tw') as HTMLInputElement;
 const snapSizeSlider = document.getElementById('snap-size-slider') as HTMLInputElement;
 const snapSizeValue = document.getElementById('snap-size-value') as HTMLSpanElement;
 const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
-const btnReset = document.getElementById('btn-reset-view') as HTMLButtonElement;
 const btnExportPng = document.getElementById('btn-export-png') as HTMLButtonElement;
 const btnUndo = document.getElementById('btn-undo') as HTMLButtonElement;
 const btnRedo = document.getElementById('btn-redo') as HTMLButtonElement;
@@ -332,20 +333,28 @@ btnToggleProps.addEventListener('click', () => {
   }
 });
 
-btnCloseTools.addEventListener('click', () => closeAllMobilePanels());
-btnCloseProps.addEventListener('click', () => closeAllMobilePanels());
+btnCloseTools.addEventListener('click', () => {
+  mainToolbox.classList.toggle('minimized');
+  closeAllMobilePanels();
+});
+btnCloseProps.addEventListener('click', () => {
+  propertiesSidebar.classList.toggle('minimized');
+  closeAllMobilePanels();
+});
 
 // Mode UI
 btnModeAdd.addEventListener('click', () => {
   currentMode = 'add';
   btnModeAdd.classList.add('active');
   btnModeSub.classList.remove('active');
+  thicknessLabel.textContent = 'Pen Size';
 });
 
 btnModeSub.addEventListener('click', () => {
   currentMode = 'subtract';
   btnModeSub.classList.add('active');
   btnModeAdd.classList.remove('active');
+  thicknessLabel.textContent = 'Eraser Size';
 });
 
 // Shape UI
@@ -356,6 +365,7 @@ btnPen.addEventListener('click', () => {
   btnCircle.classList.remove('active');
   btnISection.classList.remove('active');
   thicknessContainer.style.display = 'flex';
+  snapSliderContainer.style.display = 'flex';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'none';
@@ -368,6 +378,7 @@ btnRect.addEventListener('click', () => {
   btnCircle.classList.remove('active');
   btnISection.classList.remove('active');
   thicknessContainer.style.display = 'none';
+  snapSliderContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'block';
   circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'none';
@@ -380,6 +391,7 @@ btnCircle.addEventListener('click', () => {
   btnRect.classList.remove('active');
   btnISection.classList.remove('active');
   thicknessContainer.style.display = 'none';
+  snapSliderContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'block';
   iSectionDimensionsContainer.style.display = 'none';
@@ -392,6 +404,7 @@ btnISection.addEventListener('click', () => {
   btnRect.classList.remove('active');
   btnCircle.classList.remove('active');
   thicknessContainer.style.display = 'none';
+  snapSliderContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'block';
@@ -418,10 +431,6 @@ btnClear.addEventListener('click', async () => {
   } catch (err) {
     console.warn('Failed to auto-save:', err);
   }
-});
-
-btnReset.addEventListener('click', () => {
-  renderer.centerView();
 });
 
 btnExportPng.addEventListener('click', () => {
@@ -624,7 +633,6 @@ window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() === 'r') btnRect.click();
   if (e.key.toLowerCase() === 'c') btnCircle.click();
   if (e.key.toLowerCase() === 'i') btnISection.click();
-  if (e.key.toLowerCase() === 'v') btnReset.click();
   
   if (e.ctrlKey && e.key.toLowerCase() === 'z') {
     e.preventDefault();
@@ -666,6 +674,14 @@ function loop() {
 
 // Start
 async function initApp() {
+  // Accordion Logic
+  document.querySelectorAll('.sidebar-sub-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+      const section = (e.currentTarget as HTMLElement).closest('.collapsible-section');
+      if (section) section.classList.toggle('collapsed');
+    });
+  });
+
   updateUI();
   
   try {
