@@ -92,7 +92,7 @@ function updateUI() {
   const results = calculator.getResults();
   
   valCentroid.textContent = results.count > 0 
-    ? `(${ (results.centroidX - ORIGIN_OFFSET).toFixed(1) }, ${ (results.centroidY - ORIGIN_OFFSET).toFixed(1) }) mm`
+    ? `(${ (results.centroidXRel).toFixed(1) }, ${ (results.centroidYRel).toFixed(1) }) mm`
     : '(0.0, 0.0) mm';
     
   valArea.innerHTML = `${results.area.toLocaleString()} <small>mm&sup2;</small>`;
@@ -271,7 +271,7 @@ window.addEventListener('pointermove', (e) => {
   
   if (lastMouseWorld) {
     // Update coordinate display (relative to origin)
-    coordDisplay.textContent = `X: ${Math.round(lastMouseWorld.x - ORIGIN_OFFSET)}mm, Y: ${Math.round(lastMouseWorld.y - ORIGIN_OFFSET)}mm`;
+    coordDisplay.textContent = `X: ${Math.round(lastMouseWorld.x - ORIGIN_OFFSET)}mm, Y: ${Math.round(ORIGIN_OFFSET - lastMouseWorld.y)}mm`;
 
     if (isDrawing) {
       drawAt(lastMouseWorld.x, lastMouseWorld.y);
@@ -581,8 +581,8 @@ btnExportPng.addEventListener('click', () => {
     textY += 45;
   };
 
-  addLine("Centroid X", `${(results.centroidX - ORIGIN_OFFSET).toFixed(1)} mm`);
-  addLine("Centroid Y", `${(results.centroidY - ORIGIN_OFFSET).toFixed(1)} mm`);
+  addLine("Centroid X", `${(results.centroidXRel).toFixed(1)} mm`);
+  addLine("Centroid Y", `${(results.centroidYRel).toFixed(1)} mm`);
   addLine("Area", `${results.area.toLocaleString()} mm²`);
   addLine("Width", `${results.width} mm`);
   addLine("Height", `${results.height} mm`);

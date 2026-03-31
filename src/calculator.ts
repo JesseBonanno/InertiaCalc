@@ -5,6 +5,8 @@ export interface SMAResults {
   height: number;
   centroidX: number;
   centroidY: number;
+  centroidXRel: number;
+  centroidYRel: number;
   Ix: number;
   Iy: number;
   Ixy: number;
@@ -127,6 +129,7 @@ export class SMACalculator {
     if (this.n === 0) {
       return { 
         count: 0, area: 0, width: 0, height: 0, centroidX: 0, centroidY: 0, 
+        centroidXRel: 0, centroidYRel: 0,
         Ix: 0, Iy: 0, Ixy: 0, J: 0, Imax: 0, Imin: 0, theta: 0, 
         kx: 0, ky: 0, Zx: 0, Zy: 0,
         xMin: 0, xMax: 0, yMin: 0, yMax: 0
@@ -139,7 +142,7 @@ export class SMACalculator {
     // Second Moments
     const Ix = (this.n / 12) + (this.sumY2 - this.n * cy * cy);
     const Iy = (this.n / 12) + (this.sumX2 - this.n * cx * cx);
-    const Ixy = this.sumXY - this.n * cx * cy;
+    const Ixy = -(this.sumXY - this.n * cx * cy); // Flipped for Y-up
     const J = Ix + Iy;
 
     // Principal Axis calculation
@@ -168,6 +171,8 @@ export class SMACalculator {
       height: this.yMax - this.yMin + 1,
       centroidX: cx + 0.5,
       centroidY: cy + 0.5,
+      centroidXRel: (cx + 0.5) - this.xMin,
+      centroidYRel: (this.yMax + 1) - (cy + 0.5),
       Ix: Math.max(0, Ix),
       Iy: Math.max(0, Iy),
       Ixy,

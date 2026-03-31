@@ -376,7 +376,7 @@ export class CanvasRenderer {
 
       // Label (centered origin)
       ctx.fillStyle = textColor;
-      ctx.fillText(`${y - height/2}`, rulerSize - 8, sy);
+      ctx.fillText(`${height/2 - y}`, rulerSize - 8, sy);
     }
 
     // 5. Unit Label in the Corner (0,0 of ruler)
