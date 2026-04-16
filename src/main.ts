@@ -113,6 +113,67 @@ const renderer = new CanvasRenderer(canvas, GRID_SIZE, GRID_SIZE);
 const storage = new ShapeStorage();
 const dxfImporter = new DXFImporter();
 
+const SETTINGS_INPUT_IDS = [
+  'rect-w', 'rect-h', 'circle-r',
+  'i-w', 'i-h', 'i-tf', 'i-tw', 'i-radius',
+  'pfc-w', 'pfc-h', 'pfc-tf', 'pfc-tw', 'pfc-radius',
+  'thickness-slider', 'snap-size-slider'
+];
+
+async function saveToolSettings() {
+  const settings: any = {
+    currentShape,
+    currentMode
+  };
+  SETTINGS_INPUT_IDS.forEach(id => {
+    const el = document.getElementById(id) as HTMLInputElement;
+    if (el) settings[id] = el.value;
+  });
+  try {
+    await storage.save('tool-settings', settings);
+  } catch (err) {
+    console.warn('Failed to save settings:', err);
+  }
+}
+
+async function loadToolSettings() {
+  try {
+    const settings = await storage.load('tool-settings');
+    if (settings) {
+      // One-time migration for corrected README defaults
+      if (settings['i-h'] === '356') settings['i-h'] = '359';
+      if (settings['i-tf'] === '11.5') settings['i-tf'] = '13';
+      if (settings['i-tw'] === '7.3') settings['i-tw'] = '8';
+
+      if (settings.currentMode) {
+          currentMode = settings.currentMode;
+          if (currentMode === 'add') btnModeAdd.click();
+          else btnModeSub.click();
+      }
+      if (settings.currentShape) {
+          currentShape = settings.currentShape;
+          const btnMap: Record<string, HTMLButtonElement> = {
+              'pen': btnPen, 'rect': btnRect, 'circle': btnCircle, 'isection': btnISection, 'pfc': btnPFC
+          };
+          if (btnMap[currentShape]) btnMap[currentShape].click();
+      }
+      
+      SETTINGS_INPUT_IDS.forEach(id => {
+        if (settings[id] !== undefined) {
+          const el = document.getElementById(id) as HTMLInputElement;
+          if (el) {
+            el.value = settings[id];
+            el.dispatchEvent(new Event('input'));
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Failed to load settings:', err);
+  }
+}
+
+
 // Functions
 function updateUI() {
   const results = calculator.getResults();
@@ -876,6 +937,9 @@ async function initApp() {
 
   updateUI();
   
+  // Load settings first so UI matches user preference
+  await loadToolSettings();
+  
   try {
     const savedHistory = await storage.load('last-session-history');
     if (Array.isArray(savedHistory)) {
@@ -887,8 +951,22 @@ async function initApp() {
   } catch (err) {
     console.warn('Failed to restore session:', err);
   }
+
+  // Setup auto-save for tool settings
+  const settingsInputs = mainToolbox.querySelectorAll('input');
+  settingsInputs.forEach(input => {
+    input.addEventListener('change', saveToolSettings);
+  });
+
+  // Track mode and shape changes too
+  [btnModeAdd, btnModeSub, btnPen, btnRect, btnCircle, btnISection, btnPFC].forEach(btn => {
+      btn.addEventListener('click', () => {
+          setTimeout(saveToolSettings, 0); // Allow click logic to finish first
+      });
+  });
   
   requestAnimationFrame(loop);
 }
 
 initApp();
+
