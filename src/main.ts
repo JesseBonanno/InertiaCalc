@@ -472,7 +472,13 @@ btnModeSub.addEventListener('click', () => {
 btnPen.addEventListener('click', () => {
   currentShape = 'pen';
   btnPen.classList.add('active');
+  btnRect.classList.remove('active');
   btnCircle.classList.remove('active');
+  btnISection.classList.remove('active');
+  btnPFC.classList.remove('active');
+  
+  thicknessContainer.style.display = 'block';
+  snapSliderContainer.style.display = 'block';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'none';
