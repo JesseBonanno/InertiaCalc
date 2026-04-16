@@ -29,6 +29,7 @@ export type Action =
   | { type: 'circle'; x: number; y: number; r: number; active: boolean }
   | { type: 'isection'; x: number; y: number; w: number; h: number; tf: number; tw: number; webRadius: number; active: boolean }
   | { type: 'pfc'; x: number; y: number; w: number; h: number; tf: number; tw: number; webRadius: number; active: boolean }
+  | { type: 'bitmap'; mask: Uint8Array; active: boolean }
   | { type: 'stroke'; points: {x: number, y: number}[]; size: number; active: boolean }
   | { type: 'clear' };
 
@@ -254,6 +255,9 @@ export class SMACalculator {
         case 'pfc':
           this.drawPFCInternal(action.x, action.y, action.w, action.h, action.tf, action.tw, action.webRadius, action.active);
           break;
+        case 'bitmap':
+          this.drawBitmapInternal(action.mask, action.active);
+          break;
       case 'stroke':
         this.drawStrokeInternal(action.points, action.size, action.active);
         break;
@@ -354,6 +358,16 @@ export class SMACalculator {
 
       drawFillet(webInnerX, topFlangeInnerY, 1, 1); // Top junction
       drawFillet(webInnerX, bottomFlangeInnerY, 1, -1); // Bottom junction
+    }
+  }
+
+  private drawBitmapInternal(mask: Uint8Array, active: boolean) {
+    for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 1) {
+            const x = i % this.width;
+            const y = Math.floor(i / this.width);
+            this.setPixel(x, y, active);
+        }
     }
   }
 

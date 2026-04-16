@@ -254,6 +254,24 @@ export class CanvasRenderer {
     }
   }
 
+  public drawBitmap(mask: Uint8Array, active: boolean) {
+    const imgData = this.offCtx.getImageData(0, 0, this.width, this.height);
+    for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 1) {
+            const idx = i * 4;
+            if (active) {
+                imgData.data[idx] = 56;
+                imgData.data[idx+1] = 189;
+                imgData.data[idx+2] = 248;
+                imgData.data[idx+3] = 255;
+            } else {
+                imgData.data[idx+3] = 0;
+            }
+        }
+    }
+    this.offCtx.putImageData(imgData, 0, 0);
+  }
+
   public syncFromData(data: Uint8Array) {
     this.offCtx.clearRect(0, 0, this.width, this.height);
     this.offCtx.fillStyle = "#38bdf8";

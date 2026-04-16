@@ -2,6 +2,7 @@ import './style.css';
 import { SMACalculator } from './calculator';
 import { CanvasRenderer } from './canvas-renderer';
 import { ShapeStorage } from './storage';
+import { DXFImporter } from './dxf-importer';
 
 // Constants
 const GRID_SIZE = 3000; // 3000mm x 3000mm
@@ -14,6 +15,9 @@ let isDrawing = false;
 let isPanning = false;
 let lastMousePos = { x: 0, y: 0 };
 let currentStroke: { type: 'stroke', points: {x: number, y: number}[], size: number, active: boolean } | null = null;
+let currentDxfEntities: any[] = [];
+let currentDxfFilename = '';
+
 
 // DOM Elements
 const canvas = document.getElementById('main-canvas') as HTMLCanvasElement;
@@ -58,6 +62,8 @@ const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
 const btnExportPng = document.getElementById('btn-export-png') as HTMLButtonElement;
 const btnUndo = document.getElementById('btn-undo') as HTMLButtonElement;
 const btnRedo = document.getElementById('btn-redo') as HTMLButtonElement;
+const btnImportDXF = document.getElementById('btn-import-dxf') as HTMLButtonElement;
+const dxfUpload = document.getElementById('dxf-upload') as HTMLInputElement;
 const coordDisplay = document.getElementById('coordinate-display') as HTMLDivElement;
 const valCentroid = document.getElementById('val-centroid') as HTMLSpanElement;
 const valArea = document.getElementById('val-area') as HTMLSpanElement;
@@ -80,6 +86,16 @@ const btnToggleTools = document.getElementById('btn-toggle-tools') as HTMLButton
 const btnToggleProps = document.getElementById('btn-toggle-props') as HTMLButtonElement;
 const btnCloseTools = document.getElementById('btn-close-tools') as HTMLButtonElement;
 const btnCloseProps = document.getElementById('btn-close-props') as HTMLButtonElement;
+const importModal = document.getElementById('import-modal') as HTMLDivElement;
+const importLayerSelect = document.getElementById('import-layer-select') as HTMLSelectElement;
+const importScaleInput = document.getElementById('import-scale-input') as HTMLInputElement;
+const importBoundsInfo = document.getElementById('import-bounds-info') as HTMLDivElement;
+const btnConfirmImport = document.getElementById('btn-confirm-import') as HTMLButtonElement;
+const btnCancelImport = document.getElementById('btn-cancel-import') as HTMLButtonElement;
+const btnCloseImport = document.getElementById('btn-close-import') as HTMLButtonElement;
+const importFilenameDisplay = document.getElementById('import-filename') as HTMLSpanElement;
+
+
 const mainToolbox = document.getElementById('main-toolbox') as HTMLDivElement;
 const propertiesSidebar = document.getElementById('properties-sidebar') as HTMLDivElement;
 
@@ -95,6 +111,7 @@ function closeAllMobilePanels(): boolean {
 const calculator = new SMACalculator(GRID_SIZE, GRID_SIZE);
 const renderer = new CanvasRenderer(canvas, GRID_SIZE, GRID_SIZE);
 const storage = new ShapeStorage();
+const dxfImporter = new DXFImporter();
 
 // Functions
 function updateUI() {
@@ -460,6 +477,121 @@ btnPFC.addEventListener('click', () => {
   iSectionDimensionsContainer.style.display = 'none';
   pfcDimensionsContainer.style.display = 'grid';
 });
+
+  // --- DXF Import Logic (Refactored for Custom Modal) ---
+  
+  btnImportDXF.addEventListener('click', () => {
+    dxfUpload.click();
+  });
+  
+  const closeImportModal = () => {
+    importModal.style.display = 'none';
+    dxfUpload.value = '';
+    currentDxfEntities = [];
+    currentDxfFilename = '';
+  };
+
+  btnCancelImport.addEventListener('click', closeImportModal);
+  btnCloseImport.addEventListener('click', closeImportModal);
+
+  importLayerSelect.addEventListener('change', () => {
+    const layer = importLayerSelect.value;
+    const layerEntities = currentDxfEntities.filter(ent => ent.layer === layer);
+    const bounds = dxfImporter.getBounds(layerEntities);
+    if (bounds) {
+      importBoundsInfo.textContent = `Detected Bounds: ${bounds.width.toFixed(1)} x ${bounds.height.toFixed(1)} mm`;
+    } else {
+      importBoundsInfo.textContent = `Detected Bounds: -- x --`;
+    }
+  });
+
+  btnConfirmImport.addEventListener('click', () => {
+    const layer = importLayerSelect.value;
+    const scale = parseFloat(importScaleInput.value);
+    
+    if (isNaN(scale) || scale <= 0) {
+      alert('Please enter a valid scale factor (> 0).');
+      return;
+    }
+
+    const layerEntities = currentDxfEntities.filter(ent => ent.layer === layer);
+    if (layerEntities.length === 0) {
+      alert('No geometry found on selected layer.');
+      return;
+    }
+
+    console.log(`App: Importing layer ${layer} with scale ${scale}`);
+    const mask = dxfImporter.rasterize(layerEntities, GRID_SIZE, GRID_SIZE, scale);
+    
+    if (mask) {
+      const active = currentMode === 'add';
+      const action = { type: 'bitmap' as const, mask, active };
+      calculator.addAction(action);
+      calculator.executeAction(action);
+      renderer.drawBitmap(mask, active);
+      requestUIUpdate();
+      console.log('App: Custom Modal Import Success.');
+      closeImportModal();
+    } else {
+      alert('Failed to generate profile from DXF data.');
+    }
+  });
+
+  dxfUpload.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    try {
+      console.log('App: Opening DXF:', file.name);
+      const text = await file.text();
+      
+      const data = dxfImporter.parse(text);
+      const entities = dxfImporter.resolveEntities(data);
+      
+      if (entities.length === 0) {
+        alert('No compatible geometric entities found in this DXF.');
+        return;
+      }
+
+      currentDxfEntities = entities;
+      currentDxfFilename = file.name;
+      importFilenameDisplay.textContent = currentDxfFilename;
+
+
+      // Populate Layers
+      const layers = dxfImporter.getLayers(entities);
+      importLayerSelect.innerHTML = '';
+      layers.forEach(layer => {
+        const option = document.createElement('option');
+        option.value = layer;
+        option.textContent = layer;
+        importLayerSelect.appendChild(option);
+      });
+
+      // Auto-detect Layer
+      const fileNameBase = file.name.replace(/\.dxf$/i, '').toUpperCase();
+      const matchingLayer = layers.find(l => l.toUpperCase().includes(fileNameBase));
+      if (matchingLayer) {
+        importLayerSelect.value = matchingLayer;
+      }
+
+      // Initial Bounds Info
+      const initialLayer = importLayerSelect.value;
+      const initialEntities = entities.filter(ent => ent.layer === initialLayer);
+      const bounds = dxfImporter.getBounds(initialEntities);
+      if (bounds) {
+        importBoundsInfo.textContent = `Detected Bounds: ${bounds.width.toFixed(1)} x ${bounds.height.toFixed(1)} mm`;
+      }
+
+      // Show Modal
+      importModal.style.display = 'flex';
+
+    } catch (err) {
+      console.error('DXF Error:', err);
+      alert(`Failed to load DXF: ${err instanceof Error ? err.message : String(err)}`);
+      dxfUpload.value = '';
+    }
+  });
 
 thicknessSlider.addEventListener('input', () => {
   thicknessValue.textContent = thicknessSlider.value;
