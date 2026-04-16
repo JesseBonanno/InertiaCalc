@@ -27,7 +27,7 @@ export interface SMAResults {
 export type Action = 
   | { type: 'rect'; x: number; y: number; w: number; h: number; active: boolean }
   | { type: 'circle'; x: number; y: number; r: number; active: boolean }
-  | { type: 'isection'; x: number; y: number; w: number; h: number; tf: number; tw: number; active: boolean }
+  | { type: 'isection'; x: number; y: number; w: number; h: number; tf: number; tw: number; webRadius: number; active: boolean }
   | { type: 'stroke'; points: {x: number, y: number}[]; size: number; active: boolean }
   | { type: 'clear' };
 
@@ -247,9 +247,9 @@ export class SMACalculator {
       case 'circle':
         this.drawCircleInternal(action.x, action.y, action.r, action.active);
         break;
-      case 'isection':
-        this.drawISectionInternal(action.x, action.y, action.w, action.h, action.tf, action.tw, action.active);
-        break;
+        case 'isection':
+          this.drawISectionInternal(action.x, action.y, action.w, action.h, action.tf, action.tw, action.webRadius, action.active);
+          break;
       case 'stroke':
         this.drawStrokeInternal(action.points, action.size, action.active);
         break;
@@ -271,13 +271,49 @@ export class SMACalculator {
     }
   }
 
-  private drawISectionInternal(xPos: number, yPos: number, W: number, H: number, tf: number, tw: number, active: boolean) {
+  private drawISectionInternal(xPos: number, yPos: number, W: number, H: number, tf: number, tw: number, webRadius: number, active: boolean) {
     // Top Flange
     this.drawRectInternal(xPos, yPos - H/2 + tf/2, W, tf, active);
     // Bottom Flange
     this.drawRectInternal(xPos, yPos + H/2 - tf/2, W, tf, active);
     // Web
     this.drawRectInternal(xPos, yPos, tw, H - 2*tf, active);
+
+    // Add web radius fillets if radius > 0
+    if (webRadius > 0) {
+      const r = webRadius;
+      const webLeftX = Math.floor(xPos - tw / 2);
+      const webRightX = webLeftX + tw;
+      const topFlangeInnerY = Math.floor(yPos - H / 2 + tf);
+      const bottomFlangeInnerY = Math.floor(yPos + H / 2 - tf);
+
+      // Top-Left: ox=-1, oy=-1 (wait, top inner flange y is less than web center y)
+      // Top inner flange face is at topFlangeInnerY. Web is below it.
+      // So Top-Left fillet y goes from topFlangeInnerY to topFlangeInnerY + r - 1
+      // Top-Left fillet x goes from webLeftX - r to webLeftX - 1
+      
+      const drawFillet = (cx: number, cy: number, ox: number, oy: number) => {
+        const centerX = cx + ox * r;
+        const centerY = cy + oy * r;
+        const limit = Math.ceil(r);
+        for (let j = 0; j < limit; j++) {
+          for (let i = 0; i < limit; i++) {
+            const px = cx + (ox < 0 ? -(i + 1) : i);
+            const py = cy + (oy < 0 ? -(j + 1) : j);
+            const dx = (px + 0.5) - centerX;
+            const dy = (py + 0.5) - centerY;
+            if (dx * dx + dy * dy > r * r) {
+              this.setPixel(px, py, active);
+            }
+          }
+        }
+      };
+
+      drawFillet(webLeftX, topFlangeInnerY, -1, 1); // Top-Left
+      drawFillet(webRightX, topFlangeInnerY, 1, 1); // Top-Right
+      drawFillet(webLeftX, bottomFlangeInnerY, -1, -1); // Bottom-Left
+      drawFillet(webRightX, bottomFlangeInnerY, 1, -1); // Bottom-Right
+    }
   }
   
   private drawCircleInternal(xPos: number, yPos: number, r: number, active: boolean) {

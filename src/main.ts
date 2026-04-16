@@ -42,6 +42,7 @@ const iWInput = document.getElementById('i-w') as HTMLInputElement;
 const iHInput = document.getElementById('i-h') as HTMLInputElement;
 const iTFInput = document.getElementById('i-tf') as HTMLInputElement;
 const iTWInput = document.getElementById('i-tw') as HTMLInputElement;
+const iRadiusInput = document.getElementById('i-radius') as HTMLInputElement;
 
 const snapSizeSlider = document.getElementById('snap-size-slider') as HTMLInputElement;
 const snapSizeValue = document.getElementById('snap-size-value') as HTMLSpanElement;
@@ -189,6 +190,7 @@ function drawAt(worldX: number, worldY: number) {
     const H = parseInt(iHInput.value, 10);
     const tf = parseInt(iTFInput.value, 10);
     const tw = parseInt(iTWInput.value, 10);
+    const wr = parseFloat(iRadiusInput.value);
     
     calculator.addAction({
       type: 'isection',
@@ -198,10 +200,11 @@ function drawAt(worldX: number, worldY: number) {
       h: H,
       tf: tf,
       tw: tw,
+      webRadius: wr,
       active
     });
     calculator.executeAction(calculator.history[calculator.history.length - 1]);
-    renderer.drawISection(snapPos.x, snapPos.y, W, H, tf, tw, active);
+    renderer.drawISection(snapPos.x, snapPos.y, W, H, tf, tw, wr, active);
     changed = true;
     isDrawing = false; // Discrete action
   } else {
@@ -666,6 +669,7 @@ function loop() {
     h: parseInt(iHInput.value, 10),
     tf: parseInt(iTFInput.value, 10),
     tw: parseInt(iTWInput.value, 10),
+    webRadius: parseFloat(iRadiusInput.value),
   } : undefined;
   
   renderer.redraw(results, snapPos, lastMouseWorld, brushSize, ghostRect, ghostCircle, ghostISection);

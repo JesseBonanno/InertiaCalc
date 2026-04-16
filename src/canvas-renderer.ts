@@ -148,20 +148,59 @@ export class CanvasRenderer {
     }
   }
 
-  public drawISection(x: number, y: number, w: number, h: number, tf: number, tw: number, active: boolean) {
+  public drawISection(x: number, y: number, w: number, h: number, tf: number, tw: number, webRadius: number, active: boolean) {
     const startX = Math.floor(x - w / 2);
     const startY = Math.floor(y - h / 2);
     const webX = Math.floor(x - tw / 2);
+    const webRightX = webX + tw;
+    const webHeight = h - 2 * tf;
+    const webStartY = startY + tf;
+    const webBottomY = webStartY + webHeight;
 
     if (active) {
       this.offCtx.fillStyle = "#38bdf8";
-      this.offCtx.fillRect(startX, startY, w, tf); // Top
-      this.offCtx.fillRect(startX, Math.floor(y + h / 2 - tf), w, tf); // Bottom
-      this.offCtx.fillRect(webX, startY, tw, h); // Web
+      this.offCtx.fillRect(startX, startY, w, tf); // Top Flange
+      this.offCtx.fillRect(startX, Math.floor(y + h / 2 - tf), w, tf); // Bottom Flange
+      this.offCtx.fillRect(webX, webStartY, tw, webHeight); // Web
+      
+      // Radius rounding (fillets)
+      if (webRadius > 0) {
+        const r = webRadius;
+        const drawFillet = (cx: number, cy: number, ox: number, oy: number) => {
+          const centerX = cx + ox * r;
+          const centerY = cy + oy * r;
+          const limit = Math.ceil(r);
+          for (let j = 0; j < limit; j++) {
+            for (let i = 0; i < limit; i++) {
+              const px = cx + (ox < 0 ? -(i + 1) : i);
+              const py = cy + (oy < 0 ? -(j + 1) : j);
+              const dx = (px + 0.5) - centerX;
+              const dy = (py + 0.5) - centerY;
+              if (dx * dx + dy * dy > r * r) {
+                this.offCtx.fillRect(px, py, 1, 1);
+              }
+            }
+          }
+        };
+
+        drawFillet(webX, webStartY, -1, 1); // Top-Left
+        drawFillet(webRightX, webStartY, 1, 1); // Top-Right
+        drawFillet(webX, webBottomY, -1, -1); // Bottom-Left
+        drawFillet(webRightX, webBottomY, 1, -1); // Bottom-Right
+      }
     } else {
       this.offCtx.clearRect(startX, startY, w, tf);
       this.offCtx.clearRect(startX, Math.floor(y + h / 2 - tf), w, tf);
-      this.offCtx.clearRect(webX, startY, tw, h);
+      this.offCtx.clearRect(webX, webStartY, tw, webHeight);
+      
+      // Also clear fillets if radius > 0
+      if (webRadius > 0) {
+         // Standard clearRect for the fillet zones is fine
+         this.offCtx.clearRect(webX - webRadius, webStartY, webRadius, webRadius);
+         this.offCtx.clearRect(webRightX, webStartY, webRadius, webRadius);
+         this.offCtx.clearRect(webX - webRadius, webBottomY - webRadius, webRadius, webRadius);
+         this.offCtx.clearRect(webRightX, webBottomY - webRadius, webRadius, webRadius);
+      }
     }
   }
 
@@ -194,7 +233,7 @@ export class CanvasRenderer {
     return step;
   }
 
-  public redraw(results: SMAResults, snapPos: {x: number, y: number} | null, mouseWorld: {x: number, y: number} | null, brushSize: number, ghostRect?: {w: number, h: number}, ghostCircle?: {r: number}, ghostISection?: {w: number, h: number, tf: number, tw: number}) {
+  public redraw(results: SMAResults, snapPos: {x: number, y: number} | null, mouseWorld: {x: number, y: number} | null, brushSize: number, ghostRect?: {w: number, h: number}, ghostCircle?: {r: number}, ghostISection?: {w: number, h: number, tf: number, tw: number, webRadius: number}) {
     const { ctx, canvas, offCanvas, zoom, offsetX, offsetY, width, height } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -228,13 +267,68 @@ export class CanvasRenderer {
         ctx.arc(px, py, ghostCircle.r * zoom, 0, Math.PI * 2);
         ctx.stroke();
       } else if (ghostISection) {
-        const { w, h, tf, tw } = ghostISection;
-        // Top Flange
-        ctx.strokeRect(px - (w/2)*zoom, py - (h/2)*zoom, w*zoom, tf*zoom);
-        // Bottom Flange
-        ctx.strokeRect(px - (w/2)*zoom, py + (h/2 - tf)*zoom, w*zoom, tf*zoom);
-        // Web
-        ctx.strokeRect(px - (tw/2)*zoom, py - (h/2 - tf)*zoom, tw*zoom, (h - 2*tf)*zoom);
+        const { w, h, tf, tw, webRadius } = ghostISection;
+        const halfW = (w/2) * zoom;
+        const halfH = (h/2) * zoom;
+        const tfz = tf * zoom;
+        const twz = (tw/2) * zoom;
+        const rz = webRadius * zoom;
+
+        const xL = px - halfW;
+        const xR = px + halfW;
+        const yT = py - halfH;
+        const yB = py + halfH;
+        
+        const wxL = px - twz;
+        const wxR = px + twz;
+        const wyT = py - halfH + tfz;
+        const wyB = py + halfH - tfz;
+
+        ctx.beginPath();
+        // 1. Top Edge
+        ctx.moveTo(xL, yT);
+        ctx.lineTo(xR, yT);
+        
+        // 2. Right Side
+        ctx.lineTo(xR, wyT);
+        ctx.lineTo(wxR + rz, wyT);
+        if (rz > 0) {
+            ctx.arc(wxR + rz, wyT + rz, rz, 1.5 * Math.PI, Math.PI, true);
+        } else {
+            ctx.lineTo(wxR, wyT);
+        }
+        ctx.lineTo(wxR, wyB - rz);
+        if (rz > 0) {
+            ctx.arc(wxR + rz, wyB - rz, rz, Math.PI, 0.5 * Math.PI, true);
+        } else {
+            ctx.lineTo(wxR, wyB);
+        }
+        ctx.lineTo(wxR + rz, wyB);
+        ctx.lineTo(xR, wyB);
+        ctx.lineTo(xR, yB);
+        
+        // 3. Bottom Edge
+        ctx.lineTo(xL, yB);
+
+        // 4. Left Side
+        ctx.lineTo(xL, wyB);
+        ctx.lineTo(wxL - rz, wyB);
+        if (rz > 0) {
+            ctx.arc(wxL - rz, wyB - rz, rz, 0.5 * Math.PI, 0, true);
+        } else {
+            ctx.lineTo(wxL, wyB);
+        }
+        ctx.lineTo(wxL, wyT + rz);
+        if (rz > 0) {
+            ctx.arc(wxL - rz, wyT + rz, rz, 0, 1.5 * Math.PI, true);
+        } else {
+            ctx.lineTo(wxL, wyT);
+        }
+        ctx.lineTo(wxL - rz, wyT);
+        ctx.lineTo(xL, wyT);
+        
+        ctx.closePath();
+        ctx.stroke();
       } else {
         // Pixel-perfect brush alignment matching main.ts
         const bx = Math.floor((snapPos ? snapPos.x : mouseWorld.x) - (brushSize - 1) / 2);
