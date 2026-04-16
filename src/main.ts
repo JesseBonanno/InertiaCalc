@@ -9,7 +9,7 @@ const ORIGIN_OFFSET = 1500; // Engineering origin at center of 3m grid
 
 // State
 let currentMode: 'add' | 'subtract' = 'add';
-let currentShape: 'pen' | 'rect' | 'circle' | 'isection' = 'pen';
+let currentShape: 'pen' | 'rect' | 'circle' | 'isection' | 'pfc' = 'pen';
 let isDrawing = false;
 let isPanning = false;
 let lastMousePos = { x: 0, y: 0 };
@@ -23,6 +23,7 @@ const btnPen = document.getElementById('btn-pen') as HTMLButtonElement;
 const btnRect = document.getElementById('btn-rect') as HTMLButtonElement;
 const btnCircle = document.getElementById('btn-circle') as HTMLButtonElement;
 const btnISection = document.getElementById('btn-i-section') as HTMLButtonElement;
+const btnPFC = document.getElementById('btn-pfc') as HTMLButtonElement;
 
 const thicknessSlider = document.getElementById('thickness-slider') as HTMLInputElement;
 const thicknessValue = document.getElementById('thickness-value') as HTMLSpanElement;
@@ -43,6 +44,13 @@ const iHInput = document.getElementById('i-h') as HTMLInputElement;
 const iTFInput = document.getElementById('i-tf') as HTMLInputElement;
 const iTWInput = document.getElementById('i-tw') as HTMLInputElement;
 const iRadiusInput = document.getElementById('i-radius') as HTMLInputElement;
+
+const pfcDimensionsContainer = document.getElementById('pfc-dimensions-container') as HTMLDivElement;
+const pfcWInput = document.getElementById('pfc-w') as HTMLInputElement;
+const pfcHInput = document.getElementById('pfc-h') as HTMLInputElement;
+const pfcTFInput = document.getElementById('pfc-tf') as HTMLInputElement;
+const pfcTWInput = document.getElementById('pfc-tw') as HTMLInputElement;
+const pfcRadiusInput = document.getElementById('pfc-radius') as HTMLInputElement;
 
 const snapSizeSlider = document.getElementById('snap-size-slider') as HTMLInputElement;
 const snapSizeValue = document.getElementById('snap-size-value') as HTMLSpanElement;
@@ -207,6 +215,28 @@ function drawAt(worldX: number, worldY: number) {
     renderer.drawISection(snapPos.x, snapPos.y, W, H, tf, tw, wr, active);
     changed = true;
     isDrawing = false; // Discrete action
+  } else if (currentShape === 'pfc') {
+    const W = parseInt(pfcWInput.value, 10);
+    const H = parseInt(pfcHInput.value, 10);
+    const tf = parseInt(pfcTFInput.value, 10);
+    const tw = parseInt(pfcTWInput.value, 10);
+    const wr = parseFloat(pfcRadiusInput.value);
+    
+    calculator.addAction({
+      type: 'pfc',
+      x: snapPos.x,
+      y: snapPos.y,
+      w: W,
+      h: H,
+      tf: tf,
+      tw: tw,
+      webRadius: wr,
+      active
+    });
+    calculator.executeAction(calculator.history[calculator.history.length - 1]);
+    renderer.drawPFC(snapPos.x, snapPos.y, W, H, tf, tw, wr, active);
+    changed = true;
+    isDrawing = false; // Discrete action
   } else {
     // Pen (Stroke)
     const thickness = parseInt(thicknessSlider.value, 10);
@@ -364,14 +394,11 @@ btnModeSub.addEventListener('click', () => {
 btnPen.addEventListener('click', () => {
   currentShape = 'pen';
   btnPen.classList.add('active');
-  btnRect.classList.remove('active');
   btnCircle.classList.remove('active');
-  btnISection.classList.remove('active');
-  thicknessContainer.style.display = 'flex';
-  snapSliderContainer.style.display = 'flex';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'none';
+  pfcDimensionsContainer.style.display = 'none';
 });
 
 btnRect.addEventListener('click', () => {
@@ -380,11 +407,13 @@ btnRect.addEventListener('click', () => {
   btnPen.classList.remove('active');
   btnCircle.classList.remove('active');
   btnISection.classList.remove('active');
+  btnPFC.classList.remove('active');
   thicknessContainer.style.display = 'none';
   snapSliderContainer.style.display = 'none';
-  rectDimensionsContainer.style.display = 'block';
+  rectDimensionsContainer.style.display = 'grid';
   circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'none';
+  pfcDimensionsContainer.style.display = 'none';
 });
 
 btnCircle.addEventListener('click', () => {
@@ -393,11 +422,13 @@ btnCircle.addEventListener('click', () => {
   btnPen.classList.remove('active');
   btnRect.classList.remove('active');
   btnISection.classList.remove('active');
+  btnPFC.classList.remove('active');
   thicknessContainer.style.display = 'none';
   snapSliderContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'block';
   iSectionDimensionsContainer.style.display = 'none';
+  pfcDimensionsContainer.style.display = 'none';
 });
 
 btnISection.addEventListener('click', () => {
@@ -406,11 +437,28 @@ btnISection.addEventListener('click', () => {
   btnPen.classList.remove('active');
   btnRect.classList.remove('active');
   btnCircle.classList.remove('active');
+  btnPFC.classList.remove('active');
   thicknessContainer.style.display = 'none';
   snapSliderContainer.style.display = 'none';
   rectDimensionsContainer.style.display = 'none';
   circleDimensionsContainer.style.display = 'none';
   iSectionDimensionsContainer.style.display = 'grid';
+  pfcDimensionsContainer.style.display = 'none';
+});
+
+btnPFC.addEventListener('click', () => {
+  currentShape = 'pfc';
+  btnPFC.classList.add('active');
+  btnPen.classList.remove('active');
+  btnRect.classList.remove('active');
+  btnCircle.classList.remove('active');
+  btnISection.classList.remove('active');
+  thicknessContainer.style.display = 'none';
+  snapSliderContainer.style.display = 'none';
+  rectDimensionsContainer.style.display = 'none';
+  circleDimensionsContainer.style.display = 'none';
+  iSectionDimensionsContainer.style.display = 'none';
+  pfcDimensionsContainer.style.display = 'grid';
 });
 
 thicknessSlider.addEventListener('input', () => {
@@ -671,8 +719,16 @@ function loop() {
     tw: parseInt(iTWInput.value, 10),
     webRadius: parseFloat(iRadiusInput.value),
   } : undefined;
+
+  const ghostPFC = currentShape === 'pfc' ? {
+    w: parseInt(pfcWInput.value, 10),
+    h: parseInt(pfcHInput.value, 10),
+    tf: parseInt(pfcTFInput.value, 10),
+    tw: parseInt(pfcTWInput.value, 10),
+    webRadius: parseFloat(pfcRadiusInput.value),
+  } : undefined;
   
-  renderer.redraw(results, snapPos, lastMouseWorld, brushSize, ghostRect, ghostCircle, ghostISection);
+  renderer.redraw(results, snapPos, lastMouseWorld, brushSize, ghostRect, ghostCircle, ghostISection, ghostPFC);
   requestAnimationFrame(loop);
 }
 

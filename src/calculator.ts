@@ -28,6 +28,7 @@ export type Action =
   | { type: 'rect'; x: number; y: number; w: number; h: number; active: boolean }
   | { type: 'circle'; x: number; y: number; r: number; active: boolean }
   | { type: 'isection'; x: number; y: number; w: number; h: number; tf: number; tw: number; webRadius: number; active: boolean }
+  | { type: 'pfc'; x: number; y: number; w: number; h: number; tf: number; tw: number; webRadius: number; active: boolean }
   | { type: 'stroke'; points: {x: number, y: number}[]; size: number; active: boolean }
   | { type: 'clear' };
 
@@ -250,6 +251,9 @@ export class SMACalculator {
         case 'isection':
           this.drawISectionInternal(action.x, action.y, action.w, action.h, action.tf, action.tw, action.webRadius, action.active);
           break;
+        case 'pfc':
+          this.drawPFCInternal(action.x, action.y, action.w, action.h, action.tf, action.tw, action.webRadius, action.active);
+          break;
       case 'stroke':
         this.drawStrokeInternal(action.points, action.size, action.active);
         break;
@@ -316,6 +320,43 @@ export class SMACalculator {
     }
   }
   
+  private drawPFCInternal(xPos: number, yPos: number, W: number, H: number, tf: number, tw: number, webRadius: number, active: boolean) {
+    // Top Flange
+    this.drawRectInternal(xPos, yPos - H/2 + tf/2, W, tf, active);
+    // Bottom Flange
+    this.drawRectInternal(xPos, yPos + H/2 - tf/2, W, tf, active);
+    // Web (aligned to left edge of bounding box)
+    this.drawRectInternal(xPos - W/2 + tw/2, yPos, tw, H - 2*tf, active);
+
+    // Add web radius fillets if radius > 0
+    if (webRadius > 0) {
+      const r = webRadius;
+      const webInnerX = Math.floor(xPos - W/2 + tw);
+      const topFlangeInnerY = Math.floor(yPos - H / 2 + tf);
+      const bottomFlangeInnerY = Math.floor(yPos + H / 2 - tf);
+
+      const drawFillet = (cx: number, cy: number, ox: number, oy: number) => {
+        const centerX = cx + ox * r;
+        const centerY = cy + oy * r;
+        const limit = Math.ceil(r);
+        for (let j = 0; j < limit; j++) {
+          for (let i = 0; i < limit; i++) {
+            const px = cx + (ox < 0 ? -(i + 1) : i);
+            const py = cy + (oy < 0 ? -(j + 1) : j);
+            const dx = (px + 0.5) - centerX;
+            const dy = (py + 0.5) - centerY;
+            if (dx * dx + dy * dy > r * r) {
+              this.setPixel(px, py, active);
+            }
+          }
+        }
+      };
+
+      drawFillet(webInnerX, topFlangeInnerY, 1, 1); // Top junction
+      drawFillet(webInnerX, bottomFlangeInnerY, 1, -1); // Bottom junction
+    }
+  }
+
   private drawCircleInternal(xPos: number, yPos: number, r: number, active: boolean) {
     const r2 = r * r;
     const startX = Math.floor(xPos - r);

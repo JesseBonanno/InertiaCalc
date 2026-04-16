@@ -204,6 +204,56 @@ export class CanvasRenderer {
     }
   }
 
+  public drawPFC(x: number, y: number, w: number, h: number, tf: number, tw: number, webRadius: number, active: boolean) {
+    const startX = Math.floor(x - w / 2);
+    const startY = Math.floor(y - h / 2);
+    const webX = startX;
+    const webRightX = webX + tw;
+    const webHeight = h - 2 * tf;
+    const webStartY = startY + tf;
+    const webBottomY = webStartY + webHeight;
+
+    if (active) {
+      this.offCtx.fillStyle = "#38bdf8";
+      this.offCtx.fillRect(startX, startY, w, tf); // Top Flange
+      this.offCtx.fillRect(startX, Math.floor(y + h / 2 - tf), w, tf); // Bottom Flange
+      this.offCtx.fillRect(webX, webStartY, tw, webHeight); // Web
+      
+      // Fillets
+      if (webRadius > 0) {
+        const r = webRadius;
+        const drawFillet = (cx: number, cy: number, ox: number, oy: number) => {
+          const centerX = cx + ox * r;
+          const centerY = cy + oy * r;
+          const limit = Math.ceil(r);
+          for (let j = 0; j < limit; j++) {
+            for (let i = 0; i < limit; i++) {
+              const px = cx + (ox < 0 ? -(i + 1) : i);
+              const py = cy + (oy < 0 ? -(j + 1) : j);
+              const dx = (px + 0.5) - centerX;
+              const dy = (py + 0.5) - centerY;
+              if (dx * dx + dy * dy > r * r) {
+                this.offCtx.fillRect(px, py, 1, 1);
+              }
+            }
+          }
+        };
+
+        drawFillet(webRightX, webStartY, 1, 1); // Top
+        drawFillet(webRightX, webBottomY, 1, -1); // Bottom
+      }
+    } else {
+      this.offCtx.clearRect(startX, startY, w, tf);
+      this.offCtx.clearRect(startX, Math.floor(y + h / 2 - tf), w, tf);
+      this.offCtx.clearRect(webX, webStartY, tw, webHeight);
+      
+      if (webRadius > 0) {
+         this.offCtx.clearRect(webRightX, webStartY, webRadius, webRadius);
+         this.offCtx.clearRect(webRightX, webBottomY - webRadius, webRadius, webRadius);
+      }
+    }
+  }
+
   public syncFromData(data: Uint8Array) {
     this.offCtx.clearRect(0, 0, this.width, this.height);
     this.offCtx.fillStyle = "#38bdf8";
@@ -233,7 +283,7 @@ export class CanvasRenderer {
     return step;
   }
 
-  public redraw(results: SMAResults, snapPos: {x: number, y: number} | null, mouseWorld: {x: number, y: number} | null, brushSize: number, ghostRect?: {w: number, h: number}, ghostCircle?: {r: number}, ghostISection?: {w: number, h: number, tf: number, tw: number, webRadius: number}) {
+  public redraw(results: SMAResults, snapPos: {x: number, y: number} | null, mouseWorld: {x: number, y: number} | null, brushSize: number, ghostRect?: {w: number, h: number}, ghostCircle?: {r: number}, ghostISection?: {w: number, h: number, tf: number, tw: number, webRadius: number}, ghostPFC?: {w: number, h: number, tf: number, tw: number, webRadius: number}) {
     const { ctx, canvas, offCanvas, zoom, offsetX, offsetY, width, height } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -327,6 +377,51 @@ export class CanvasRenderer {
         ctx.lineTo(wxL - rz, wyT);
         ctx.lineTo(xL, wyT);
         
+        ctx.closePath();
+        ctx.stroke();
+      } else if (ghostPFC) {
+        const { w, h, tf, tw, webRadius } = ghostPFC;
+        const halfW = (w/2) * zoom;
+        const halfH = (h/2) * zoom;
+        const tfz = tf * zoom;
+        const twz = tw * zoom;
+        const rz = webRadius * zoom;
+
+        const xL = px - halfW;
+        const xR = px + halfW;
+        const yT = py - halfH;
+        const yB = py + halfH;
+        
+        const wxInner = xL + twz;
+        const wyT = yT + tfz;
+        const wyB = yB - tfz;
+
+        ctx.beginPath();
+        // 1. Top Edge
+        ctx.moveTo(xL, yT);
+        ctx.lineTo(xR, yT);
+        
+        // 2. Right Side (Tips)
+        ctx.lineTo(xR, wyT);
+        ctx.lineTo(wxInner + rz, wyT);
+        if (rz > 0) {
+            ctx.arc(wxInner + rz, wyT + rz, rz, 1.5 * Math.PI, Math.PI, true);
+        } else {
+            ctx.lineTo(wxInner, wyT);
+        }
+        ctx.lineTo(wxInner, wyB - rz);
+        if (rz > 0) {
+            ctx.arc(wxInner + rz, wyB - rz, rz, Math.PI, 0.5 * Math.PI, true);
+        } else {
+            ctx.lineTo(wxInner, wyB);
+        }
+        ctx.lineTo(xR, wyB);
+        ctx.lineTo(xR, yB);
+        
+        // 3. Bottom Edge
+        ctx.lineTo(xL, yB);
+
+        // 4. Back Edge (Web Back)
         ctx.closePath();
         ctx.stroke();
       } else {

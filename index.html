@@ -43,6 +43,11 @@
             <button id="btn-i-section" class="tool-btn" title="I-Section Tool (I)">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 4h12M6 20h12M12 4v16M12 10h-2M12 14h-2M12 10h2M12 14h2"/></svg>
             </button>
+            <button id="btn-pfc" class="tool-btn" title="PFC Tool (U)">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M17 4H7v16h10" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -59,22 +64,31 @@
           </div>
 
           <!-- Square Tool Dimensions -->
-          <div id="rect-dimensions-container" style="display: none;">
+          <div id="rect-dimensions-container" class="grid-2col" style="display: none;">
             <div class="setting-group">
-                <div class="label-row"><label>Width</label></div>
-                <input type="number" id="rect-w" value="100" min="1" max="1000" class="num-input">
+                <div class="label-row">
+                  <label>Width (W)</label>
+                  <span class="info-icon" data-tip="The total horizontal width of the rectangle.">?</span>
+                </div>
+                <input type="number" id="rect-w" value="100" min="1" max="500" class="num-input">
             </div>
-            <div class="setting-group" style="margin-top: 1rem;">
-                <div class="label-row"><label>Height</label></div>
-                <input type="number" id="rect-h" value="100" min="1" max="1000" class="num-input">
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Height (H)</label>
+                  <span class="info-icon" data-tip="The total vertical height of the rectangle.">?</span>
+                </div>
+                <input type="number" id="rect-h" value="100" min="1" max="500" class="num-input">
             </div>
           </div>
 
           <!-- Circle Tool Dimensions -->
           <div id="circle-dimensions-container" style="display: none;">
             <div class="setting-group">
-                <div class="label-row"><label>Radius (r)</label></div>
-                <input type="number" id="circle-r" value="50" min="1" max="1000" class="num-input">
+                <div class="label-row">
+                  <label>Radius (r)</label>
+                  <span class="info-icon" data-tip="The radius of the circle. Total diameter will be 2r.">?</span>
+                </div>
+                <input type="number" id="circle-r" value="50" min="1" max="500" class="num-input">
             </div>
           </div>
 
@@ -83,23 +97,23 @@
             <div class="setting-group">
                 <div class="label-row">
                   <label>Width (W)</label>
-                  <span class="info-icon" data-tip="The total horizontal width of the top and bottom flanges.">?</span>
+                  <span class="info-icon" data-tip="The overall width of the flanges.">?</span>
                 </div>
-                <input type="number" id="i-w" value="172" min="1" max="1000" class="num-input">
+                <input type="number" id="i-w" value="100" min="1" max="500" class="num-input">
             </div>
             <div class="setting-group">
                 <div class="label-row">
                   <label>Height (H)</label>
-                  <span class="info-icon" data-tip="The overall vertical height from the outer face of the top flange to the outer face of the bottom flange.">?</span>
+                  <span class="info-icon" data-tip="The total height from bottom of bottom flange to top of top flange.">?</span>
                 </div>
-                <input type="number" id="i-h" value="359" min="1" max="1000" class="num-input">
+                <input type="number" id="i-h" value="200" min="1" max="500" class="num-input">
             </div>
             <div class="setting-group">
                 <div class="label-row">
                   <label>Flange (tf)</label>
                   <span class="info-icon" data-tip="The thickness of the top and bottom horizontal flanges.">?</span>
                 </div>
-                <input type="number" id="i-tf" value="13" min="1" max="500" class="num-input">
+                <input type="number" id="i-tf" value="12" min="1" max="500" class="num-input">
             </div>
             <div class="setting-group">
                 <div class="label-row">
@@ -114,6 +128,45 @@
                   <span class="info-icon" data-tip="The fillet radius between the web and the flanges.">?</span>
                 </div>
                 <input type="number" id="i-radius" value="11" min="0" max="100" step="1" class="num-input">
+            </div>
+          </div>
+
+          <!-- PFC Tool Dimensions -->
+          <div id="pfc-dimensions-container" class="grid-2col" style="display: none;">
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Width (W)</label>
+                  <span class="info-icon" data-tip="The width of the flanges plus the web thickness.">?</span>
+                </div>
+                <input type="number" id="pfc-w" value="75" min="1" max="500" class="num-input">
+            </div>
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Height (H)</label>
+                  <span class="info-icon" data-tip="The total height of the channel.">?</span>
+                </div>
+                <input type="number" id="pfc-h" value="200" min="1" max="500" class="num-input">
+            </div>
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Flange (tf)</label>
+                  <span class="info-icon" data-tip="The thickness of the horizontal flanges.">?</span>
+                </div>
+                <input type="number" id="pfc-tf" value="12" min="1" max="500" class="num-input">
+            </div>
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Web (tw)</label>
+                  <span class="info-icon" data-tip="The thickness of the vertical web back.">?</span>
+                </div>
+                <input type="number" id="pfc-tw" value="6" min="1" max="500" class="num-input">
+            </div>
+            <div class="setting-group">
+                <div class="label-row">
+                  <label>Radius (r<sub>w</sub>)</label>
+                  <span class="info-icon" data-tip="The internal fillet radius.">?</span>
+                </div>
+                <input type="number" id="pfc-radius" value="12" min="0" max="100" step="1" class="num-input">
             </div>
           </div>
 
